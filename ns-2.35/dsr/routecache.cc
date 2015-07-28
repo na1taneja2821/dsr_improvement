@@ -54,7 +54,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdarg.h>
 }
-
+#include <iostream>
 
 
 #undef DEBUG
@@ -195,6 +195,7 @@ RouteCache::pre_addRoute(const Path& route, Path& rt,
       if (rt[c] == who_from) kind = LT_UNTESTED; // remaining ids came from $
       rt[c].link_type = kind;
       rt[c].t = t;
+	std::cout << rt[c].addr << " " << rt[c].t << std::endl;
     }
 
   return CONT_PROCESSING;

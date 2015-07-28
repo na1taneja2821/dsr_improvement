@@ -17046,7 +17046,7 @@ return $node\n\
 \n\
 \n\
 set opt(rt_port) 255\n\
-set opt(cc)      \"off\"            ;# have god check the caches for bad links?\n\
+set opt(cc)      \"on\"            ;# have god check the caches for bad links?\n\
 \n\
 \n\
 Class CacheTimer -superclass Timer\n\
@@ -17118,7 +17118,7 @@ set classifier_ \"srnode made illegal use of classifier_\"\n\
 SRNode instproc start-dsr {} {\n\
 $self instvar dsr_agent_\n\
 global opt;\n\
-\n\
+puts \"Starting DSR\"\n\
 $dsr_agent_ startdsr\n\
 if {$opt(cc) == \"on\"} {checkcache $dsr_agent_}\n\
 }\n\
@@ -17198,7 +17198,7 @@ $T target [$ns_ set nullAgent_]\n\
 $T attach $tracefd\n\
 $T set src_ $id\n\
 $node log-target $T\n\
-\n\
+puts \"Starting Dsr for \" + $id\n\
 $ns_ at 0.0 \"$node start-dsr\"\n\
 return $node\n\
 }\n\

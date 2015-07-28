@@ -445,6 +445,7 @@ DSRAgent::command(int argc, const char*const* argv)
 {
   TclObject *obj;  
 
+	printf("Executing this command %s\n", argv[1]);
   if (argc == 2) 
     {
       if (strcasecmp(argv[1], "testinit") == 0)
@@ -742,6 +743,7 @@ DSRAgent::handlePacketReceipt(SRPacket& p)
   hdr_cmn *cmh =  hdr_cmn::access(p.pkt);
   hdr_sr *srh =  hdr_sr::access(p.pkt);
 
+	printf("Packet Received with source %d, dest %d: myId %d\n", p.src.addr, p.dest.addr, node_ -> nodeid());
   if (srh->route_reply())
     { // we got a route_reply piggybacked on a route_request
       // accept the new source route before we do anything else
@@ -869,6 +871,7 @@ DSRAgent::handleFlowForwarding(SRPacket &p, int flowidx) {
     // stamp a route in the packet...
     p.route = flow_table[flowidx].sourceRoute;
     p.route.index() -= amt;
+	printf("handle flow forwarding src = %d, dest = %d, node = %d\n", p.src.addr, p.dest.addr, node_ -> nodeid());
     sendRouteShortening(p, p.route.index(), 
 			flow_table[flowidx].sourceRoute.index());
   }
@@ -1037,6 +1040,7 @@ DSRAgent::handleRouteRequest(SRPacket &p)
      sense 'cause your target is probably sitting next to you)
       - if reply from cache is on, check the cache and reply if possible
       - otherwise, just propagate if possible. */
+	printf("Route request sent by src = %d, for dest = %d, myId = %d\n", p.src.addr, p.dest.addr, node_ -> nodeid());
   if ((srh->max_propagation() == 0 || dsragent_reply_from_cache_on_propagating)
       && replyFromRouteCache(p))
 	  return;			// all done
@@ -1220,6 +1224,7 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   // make up and send out a route reply
   p.route.appendToPath(net_id);
   p.route.reverseInPlace();
+	printf("reply from route cache %d\n", node_ -> nodeid());
   route_cache->addRoute(p.route, Scheduler::instance().clock(), net_id);
   p.dest = p.src;
   p.src = net_id;
@@ -1675,6 +1680,7 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   // flip the route around for the return to the requestor, and 
   // cache the route for future use
   p_copy.route.reverseInPlace();
+	printf("return srcRouteToRequestor %d\n", node_ -> nodeid());
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id);
 
   p_copy.route.resetIterator();
@@ -1755,6 +1761,7 @@ DSRAgent::acceptRouteReply(SRPacket &p)
 	  reply_route.dump());
 
   // add the new route into our cache
+	printf("accept routeReply %d\n", node_ -> nodeid());
   route_cache->addRoute(reply_route, Scheduler::instance().clock(), p.src);
 
   // back down the route request counters
@@ -2154,6 +2161,7 @@ r 8.56135 [20 42 2c 18 800] 44 DSR 56 -- 50->44 2 [0] [1 4 40] [0 0 0->0]
       for (int i = p.route.index() + 1; i < p.route.length(); i++)
 	if (p.route[i] == net_id || p.route[i] == MAC_id)
 	  { // but it'll get here eventually...
+		printf("Tap at node= %d, packet has src = %d, dest = %d\n", node_ -> nodeid(), p.src.addr, p.dest.addr);
 	    sendRouteShortening(p, p.route.index(), i);
 	  }
     }
@@ -2233,6 +2241,7 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 	  p.route.dump());
 
   // cache the route for future use (we learned the route from p)
+	printf("Route Shortening %d\n", node_ -> nodeid());
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), p.src);
   sendOutPacketWithRoute(p_copy, true);
 }

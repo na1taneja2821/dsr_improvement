@@ -39,7 +39,7 @@
 # ======================================================================
 
 set opt(rt_port) 255
-set opt(cc)      "off"            ;# have god check the caches for bad links?
+set opt(cc)      "on"            ;# have god check the caches for bad links?
 
 # ======================================================================
 # god cache monitoring
@@ -134,7 +134,7 @@ SRNode instproc init {args} {
 SRNode instproc start-dsr {} {
     $self instvar dsr_agent_
     global opt;
-
+	puts "Starting DSR"
     $dsr_agent_ startdsr
     if {$opt(cc) == "on"} {checkcache $dsr_agent_}
 }
@@ -227,7 +227,7 @@ proc dsr-create-mobile-node { id args } {
 	$T attach $tracefd
 	$T set src_ $id
 	$node log-target $T
-
+	puts "Starting Dsr for " + $id
         $ns_ at 0.0 "$node start-dsr"
 	return $node
 }
