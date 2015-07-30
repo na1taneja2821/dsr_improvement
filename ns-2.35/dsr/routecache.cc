@@ -105,6 +105,8 @@ RouteCache::command(int argc, const char*const* argv)
 	  mh.start();
 #endif
 	  return TCL_OK;
+	} else if(strcasecmp(argv[1], "check-cache") == 0) {
+		return TCL_OK;
 	}
     }
   else if(argc == 3) 

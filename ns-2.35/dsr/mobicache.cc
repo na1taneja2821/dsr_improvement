@@ -79,6 +79,7 @@ extern "C" {
 
 static const int verbose = 0;
 static const int verbose_debug = 0;
+static const double timeLimit = 1.0;
 
 /*===============================================================
   function selectors
@@ -110,11 +111,13 @@ public:
   Path* addRoute(Path &route, int &prefix_len);
   // rtns a pointer the path in the cache that we added
   void noticeDeadLink(const ID&from, const ID& to);
+	void checkCacheForTimeOut();
   // the link from->to isn't working anymore, purge routes containing
   // it from the cache
 
 private:
   Path *cache;
+	double *timeOut;
   int size;
   int victim_ptr;		// next victim for eviction
   MobiCache *routecache;
@@ -147,6 +150,7 @@ public:
   // the returned route so it will be promoted to primary storage if not there
   // already
   int command(int argc, const char*const* argv);
+	void checkCacheForTimeOut();
 
 protected:
   Cache *primary_cache;   /* routes that we are using, or that we have reason
@@ -208,8 +212,37 @@ MobiCache::command(int argc, const char*const* argv)
       if (ID(1,::IP) == net_id) 
 	trace("Sconfig %.5f using MOBICACHE", Scheduler::instance().clock());
       // FALL-THROUGH
-    }
+    } else if(argc == 2 && strcasecmp(argv[1], "check-cache") == 0) {
+		checkCacheForTimeOut();
+		return TCL_OK;
+	}
   return RouteCache::command(argc, argv);
+}
+
+void MobiCache::checkCacheForTimeOut() {
+	primary_cache -> checkCacheForTimeOut();
+	secondary_cache -> checkCacheForTimeOut();
+}
+
+void Cache::checkCacheForTimeOut() {
+	double currentTime = Scheduler::instance().clock();
+	int i;
+	printf("%s\n", name);
+	for(i = 0; i < size; i++) {
+		//printf("Checking for Time out current = %lf, old = %lf\n", currentTime, timeOut[i]);
+		if(timeOut[i] + timeLimit < currentTime) {
+			if(cache[i].length() > 0) {
+
+				printf("Cache Reset for %d\n", i );
+				int j;
+				for(j = 0; j < cache[i].length(); j++) {
+					printf("%d ", cache[i][j].addr);
+				}
+				printf("\n");
+				cache[i].reset();
+			}
+		}
+	}
 }
 
 #ifdef DSR_CACHE_STATS
@@ -483,6 +516,8 @@ Cache::Cache(char *name, int size, MobiCache *rtcache)
   this->name = name;
   this->size = size;
   cache = new Path[size];
+	timeOut = new double[size];
+	memset(timeOut, 0, sizeof(timeOut));
   routecache = rtcache;
   victim_ptr = 0;
 }
@@ -497,6 +532,7 @@ Cache::searchRoute(const ID& dest, int& i, Path &path, int &index)
   // look for dest in cache, starting at index, 
   //if found, return true with path s.t. cache[index] == path && path[i] == dest
 {
+	checkCacheForTimeOut();
   for (; index < size; index++)
     for (int n = 0 ; n < cache[index].length(); n++)
       if (cache[index][n] == dest) 
@@ -511,9 +547,10 @@ Cache::searchRoute(const ID& dest, int& i, Path &path, int &index)
 Path*
 Cache::addRoute(Path & path, int &common_prefix_len)
 {
+	checkCacheForTimeOut();
   int index, m, n;
   int victim;
-
+	
   // see if this route is already in the cache
   for (index = 0 ; index < size ; index++)
     { // for all paths in the cache
@@ -525,8 +562,18 @@ Cache::addRoute(Path & path, int &common_prefix_len)
       if (n == cache[index].length()) 
 	{ // new rt completely contains cache[index] (or cache[index] is empty)
           common_prefix_len = n;
+		printf("%s \n", name);
           for ( ; n < path.length() ; n++)
             cache[index].appendToPath(path[n]);
+		printf("Printing after addition to cache\n");
+		timeOut[index] = Scheduler::instance().clock();
+		int j;
+		for(j = 0; j < cache[index].length(); j++) {
+			printf("%d ", cache[index][j]);
+		}
+		printf("%lf \n", timeOut[index]);
+		//cache[index].reset();
+
 	  if (verbose_debug)
 	    routecache->trace("SRC %.9f _%s_ %s suffix-rule (len %d/%d) %s",
    	      Scheduler::instance().clock(), routecache->net_id.dump(),
@@ -559,6 +606,7 @@ Cache::addRoute(Path & path, int &common_prefix_len)
   }
   cache[victim].reset();
   CopyIntoPath(cache[victim], path, 0, path.length() - 1);
+	
   common_prefix_len = 0;
   index = victim; // remember which cache line we stuck the path into
 
@@ -627,7 +675,8 @@ void
 Cache::noticeDeadLink(const ID&from, const ID& to)
   // the link from->to isn't working anymore, purge routes containing
   // it from the cache
-{  
+{ 
+	checkCacheForTimeOut(); 
   for (int p = 0 ; p < size ; p++)
     { // for all paths in the cache
       for (int n = 0 ; n < (cache[p].length()-1) ; n ++)
