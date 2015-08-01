@@ -838,7 +838,13 @@ Class SRNodeNew -superclass Node/MobileNode
 
 SRNodeNew instproc init args {
 	$self instvar dsr_agent_ dmux_ entry_point_ address_
-
+	
+	if($args == "") {
+		set dsr_agent_ [new Agent/DSRAgent]
+	} else {
+		set dsr_agent $args
+	}
+	$args = ""	
         set ns [Simulator instance]
 
 	eval $self next $args	;# parent class constructor
@@ -847,7 +853,7 @@ SRNodeNew instproc init args {
 		# Use the default mash and shift
 		set dmux_ [new Classifier/Port]
 	}
-	set dsr_agent_ [new Agent/DSRAgent]
+	# set dsr_agent_ [new Agent/DSRAgent]
 
 	# setup address (supports hier-address) for dsragent
 	$dsr_agent_ addr $address_
