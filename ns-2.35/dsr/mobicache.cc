@@ -227,7 +227,7 @@ void MobiCache::checkCacheForTimeOut() {
 void Cache::checkCacheForTimeOut() {
 	double currentTime = Scheduler::instance().clock();
 	int i;
-	printf("%s\n", name);
+	//printf("%s\n", name);
 	for(i = 0; i < size; i++) {
 		//printf("Checking for Time out current = %lf, old = %lf\n", currentTime, timeOut[i]);
 		if(timeOut[i] + timeLimit < currentTime) {
@@ -532,7 +532,7 @@ Cache::searchRoute(const ID& dest, int& i, Path &path, int &index)
   // look for dest in cache, starting at index, 
   //if found, return true with path s.t. cache[index] == path && path[i] == dest
 {
-	checkCacheForTimeOut();
+	//checkCacheForTimeOut();
   for (; index < size; index++)
     for (int n = 0 ; n < cache[index].length(); n++)
       if (cache[index][n] == dest) 
@@ -547,7 +547,7 @@ Cache::searchRoute(const ID& dest, int& i, Path &path, int &index)
 Path*
 Cache::addRoute(Path & path, int &common_prefix_len)
 {
-	checkCacheForTimeOut();
+	//checkCacheForTimeOut();
   int index, m, n;
   int victim;
 	
@@ -562,7 +562,7 @@ Cache::addRoute(Path & path, int &common_prefix_len)
       if (n == cache[index].length()) 
 	{ // new rt completely contains cache[index] (or cache[index] is empty)
           common_prefix_len = n;
-		printf("%s \n", name);
+		//printf("%s \n", name);
           for ( ; n < path.length() ; n++)
             cache[index].appendToPath(path[n]);
 		printf("Printing after addition to cache\n");
@@ -676,7 +676,7 @@ Cache::noticeDeadLink(const ID&from, const ID& to)
   // the link from->to isn't working anymore, purge routes containing
   // it from the cache
 { 
-	checkCacheForTimeOut(); 
+//	checkCacheForTimeOut(); 
   for (int p = 0 ; p < size ; p++)
     { // for all paths in the cache
       for (int n = 0 ; n < (cache[p].length()-1) ; n ++)

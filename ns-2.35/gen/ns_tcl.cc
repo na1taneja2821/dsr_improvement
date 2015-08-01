@@ -1659,7 +1659,12 @@ Class SRNodeNew -superclass Node/MobileNode\n\
 \n\
 SRNodeNew instproc init args {\n\
 $self instvar dsr_agent_ dmux_ entry_point_ address_\n\
-\n\
+if {$args == \"\"} {\n\
+set dsr_agent_ [new Agent/DSRAgent]\n\
+} else {\n\
+set dsr_agent_ $args\n\
+}\n\
+set args \"\"\n\
 set ns [Simulator instance]\n\
 \n\
 eval $self next $args	;# parent class constructor\n\
@@ -1667,7 +1672,7 @@ eval $self next $args	;# parent class constructor\n\
 if {$dmux_ == \"\" } {\n\
 set dmux_ [new Classifier/Port]\n\
 }\n\
-set dsr_agent_ [new Agent/DSRAgent]\n\
+\n\
 \n\
 $dsr_agent_ addr $address_\n\
 $dsr_agent_ node $self\n\
