@@ -839,12 +839,12 @@ Class SRNodeNew -superclass Node/MobileNode
 SRNodeNew instproc init args {
 	$self instvar dsr_agent_ dmux_ entry_point_ address_
 	
-	if($args == "") {
+	if {$args == ""} {
 		set dsr_agent_ [new Agent/DSRAgent]
 	} else {
-		set dsr_agent $args
+		set dsr_agent_ $args
 	}
-	$args = ""	
+	set args ""	
         set ns [Simulator instance]
 
 	eval $self next $args	;# parent class constructor
