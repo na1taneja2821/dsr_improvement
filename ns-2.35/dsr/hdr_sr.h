@@ -112,6 +112,11 @@ struct direction_eval {
 	double 	Y_;
 };
 
+struct link_timeout {
+	int 	link_valid_;
+	double 	timeout_;
+}
+
 /* ======================================================================
    DSR Flow State Draft Stuff
    ====================================================================== */
@@ -162,6 +167,8 @@ private:
 	struct route_request	sr_request_;
 	struct route_reply	sr_reply_;
 	struct route_error	sr_error_;
+	struct direction_eval 	sr_dir_;
+	struct link_timeout	sr_timeout_;
 
 	struct flow_header      sr_flow_;
 	struct flow_timeout	sr_ftime_;
@@ -196,6 +203,12 @@ public:
 	inline int& route_error() {return sr_error_.err_valid_; }
 	inline int& num_route_errors() {return sr_error_.err_count_; }
 	inline struct link_down* down_links() {return sr_error_.err_links_; }
+	inline int& direction_eval() {return sr_dir_.dir_valid_; }
+	inline double& dir_x() { return sr_dir_.X_; }
+	inline double& dir_y() { return sr_dir_.Y_; }
+	
+	inline int& link_timeout() { return sr_timeout_.link_valid_; }
+	inline int& link_timeout_time() { return sr_timeout_.timeout_; }
 
 	// Flow state stuff, ych 5/2/01
 	inline int &flow_header() { return sr_flow_.flow_valid_; }
@@ -229,6 +242,8 @@ public:
 		if (flow_default_unknown())	sz += 12 * num_default_unknown();
 
 		if (flow_header())		sz += 4;
+		if (direction_eval())		sz += 16;
+		if (link_timeout())		sz += 8;
 
 		sz = ((sz+3)&(~3)); // align...
 		assert(sz >= 0);
@@ -280,6 +295,8 @@ public:
 		route_reply_len() = 0;
 		route_error() = 0;
 		num_route_errors() = 0;
+		direction_eval() = 0;
+		link_timeout() = 0;
 
 		flow_timeout() = 0;
 		flow_unknown() = 0;

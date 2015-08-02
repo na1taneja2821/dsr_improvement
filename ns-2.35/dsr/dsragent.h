@@ -187,6 +187,7 @@ private:
   void handlePacketReceipt(SRPacket& p);
   void handleForwarding(SRPacket& p);
   void handleRouteRequest(SRPacket &p);
+	void sendOutDirectionPacket();
   /* process a route request that isn't targeted at us */
 
   /* flow state handle functions ych */

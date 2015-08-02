@@ -489,6 +489,10 @@ DSRAgent::command(int argc, const char*const* argv)
 			       + BUFFER_CHECK * Random::uniform(1.0));	  
           return route_cache->command(argc,argv);
 	}
+	if (strcasecmp(argv[1], "sendout-direction-packet") == 0) {
+		sendOutDirectionPacket();
+		return TCL_OK;
+	}
     }
   else if(argc == 3) 
     {
@@ -735,15 +739,44 @@ DSRAgent::handlePktWithoutSR(SRPacket& p, bool retry)
       return;
     } // end of we don't have a route
 }
-
+double DSRAgent::calcTimeOut(double x1, double x2, double y1, double y2, double dt, double radius) {
+	double my_x = node_ -> X();
+	double my_y = node_ -> Y();
+	double distance1 = sqrt((my_x - x1) * (my_x - x1) + (my_y - y1) * (my_y - y1));
+	double distance2 = sqrt((my_x - x2) * (my_x - x2) + (my_y - y2) * (my_y - y2));
+	double velocity = abs(distance1 - distance2) / dt;
+	double distLeft = 0;
+	if(distance1 < distance2) {
+		distLeft = radius - distance2;
+	} else {
+		distLeft = radius + distance2;
+	}
+	if(velocity == 0) {
+		return 300.0;
+	}
+	return distLeft / velocity;
+}
+void DSRAgent::handleDirectionPacket(SRPacket& p) {
+	hdr_sr *srh = hdr_sr::access(p.pkt);
+	if(srh -> direction_eval() == 1) {
+		addToList(p.src, srh -> dir_x(), srh -> dir_y());
+	} else {
+		struct coord temp = findFromList(p.src); 
+		calcTimeOut(coord.x, srh -> dir_x(), coord.y, srh -> dir_y(), node_ -> radius());
+		// Add the code for timeout reply
+	}
+}	
 void
 DSRAgent::handlePacketReceipt(SRPacket& p)
   /* Handle a packet destined to us */
 {
+	
   hdr_cmn *cmh =  hdr_cmn::access(p.pkt);
   hdr_sr *srh =  hdr_sr::access(p.pkt);
-
-
+	if(srh -> direction_eval()) {
+		handleDirectionPacket(p);
+		return;
+	}
   if (srh->route_reply())
     { // we got a route_reply piggybacked on a route_request
       // accept the new source route before we do anything else
@@ -1260,7 +1293,31 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   return true;
 }
 
+void DSRAgent::sendOutDirectionPacket() {
+	SRPacket p;
+    p.src = net_id;
+    p.pkt = allocpkt();
 
+    hdr_sr *srh = hdr_sr::access(p.pkt);
+    hdr_ip *iph = hdr_ip::access(p.pkt);
+    hdr_cmn *cmnh = hdr_cmn::access(p.pkt);
+
+	
+    iph->daddr() = IP_BROADCAST; iph->dport() = RT_PORT;
+    iph->saddr() = Address::instance().create_ipaddr(net_id.getNSAddr_t(),RT_PORT);
+    iph->sport() = RT_PORT;
+    iph->ttl() = 1;
+
+    cmnh->ptype() = PT_DSR;
+    cmnh->size() = size_ + IP_HDR_LEN; // add in IP header
+
+
+    srh->init();
+	srh -> direction_eval() = 1;
+    Scheduler::instance().schedule(ll, p.pkt, 0);
+
+    p.pkt = NULL; 
+}
 void
 DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
      // take packet and send it out, packet must a have a route in it
