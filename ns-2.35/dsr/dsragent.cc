@@ -453,7 +453,7 @@ DSRAgent::command(int argc, const char*const* argv)
 
 	
 	if (strcasecmp(argv[1], "sendout-direction-packet") == 0) {
-		sendOutDirectionPacket(atof(argv[2]), atof(argv[3]), atoi(argv[4]));
+		sendOutDirectionPacket(atoi(argv[2]));
 		return TCL_OK;
 	}
   if (argc == 2) 
@@ -752,7 +752,11 @@ DSRAgent::handlePktWithoutSR(SRPacket& p, bool retry)
 void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) {
 	int i;
 	double presentTime = t;
-	//printf("Add to neighbour %d", node_ -> nodeid());
+	//printf("Just a check %lf %lf %lf", node_ -> speed(), node_ -> dX(), node_ -> dY());
+	double dx, dy, dz;
+	node_ -> getVelo(&dx, &dy, &dz);
+	double myX = dx * (t - node_ -> originalTime()) + node_ -> originalX();
+	double myY = dy * (t - node_ -> originalTime()) + node_ -> originalY();
 	if(status == 1) {
 		for(i = 0; i < MAX_NEIGHBOURS; i++) {
 			if(neighbourLoc[i].id == id) {	
@@ -762,9 +766,9 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 				//temp.X = x;
 				//temp.Y = y;
 				temp.distance = calcDistance(
-							node_ -> X(),
+							myX,
 							x,
-							node_ -> Y(),
+							myY,
 							y);
 				neighbourLoc[i] = temp;
 				return;
@@ -777,11 +781,11 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 				temp.t = presentTime;
 				//temp.X = x;
 				//temp.Y = y;
-				printf("coords %lf %lf %lf %lf", node_ -> X(), x, node_ -> Y(), y);
+				//printf("coords %lf %lf %lf %lf", node_ -> X(), x, node_ -> Y(), y);
 				temp.distance = calcDistance(
-							node_ -> X(),
+							myX,
 							x,
-							node_ -> Y(),
+							myY,
 							y);
 				neighbourLoc[i] = temp;
 				break;
@@ -811,9 +815,9 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 		double dt = presentTime - neighbourLoc[index].t;
 		printf("%lf\n", dt);
 		neighbourLoc[index].t = presentTime;
-		double newDist = calcDistance(node_ -> X(),
+		double newDist = calcDistance(myX,
 						x,
-						node_ -> Y(),
+						myY,
 						y);
 		printf("Printing distance %lf - %lf\n", newDist, neighbourLoc[index].distance);
 		double velocity = (newDist - neighbourLoc[index].distance) / dt;
@@ -843,9 +847,9 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 		}
 		double dt = presentTime - temp.t;
 		printf("%lf\n", dt);
-		double newDist = calcDistance(node_ -> X(),
+		double newDist = calcDistance(myX,
 						x,
-						node_ -> Y(),
+						myY,
 						y);
 		
 		double velocity = (newDist - temp.distance) / dt;
@@ -1448,7 +1452,7 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   return true;
 }
 
-void DSRAgent::sendOutDirectionPacket(double x, double y, int status) {
+void DSRAgent::sendOutDirectionPacket(int status) {
 	SRPacket p;
     p.src = net_id;
     p.pkt = allocpkt();
@@ -1469,10 +1473,14 @@ void DSRAgent::sendOutDirectionPacket(double x, double y, int status) {
 
     srh->init();
 	printf("Hi there status = %d", status);
-	srh -> direction_eval() = status;
-	srh -> dir_x() = x;
-	srh -> dir_y() = y;
+	double dx, dy, dz;
+	node_ -> getVelo(&dx, &dy, &dz);
 	srh -> dir_time() = Scheduler::instance().clock();
+	double myX = dx * (srh -> dir_time() - node_ -> originalTime()) + node_ -> originalX();
+	double myY = dy * (srh -> dir_time() - node_ -> originalTime()) + node_ -> originalY();
+	srh -> direction_eval() = status;
+	srh -> dir_x() = myX;
+	srh -> dir_y() = myY;
     Scheduler::instance().schedule(ll, p.pkt, 0);
 
     p.pkt = NULL; 

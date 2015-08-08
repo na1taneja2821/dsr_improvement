@@ -121,6 +121,8 @@ MobileNode::MobileNode(void) :
 	X_ = Y_ = Z_ = speed_ = 0.0;
 	dX_ = dY_ = dZ_ = 0.0;
 	destX_ = destY_ = 0.0;
+	//original_X_ = original_Y_ = 0.0;
+	//original_time_ = 0.0;
 
 	random_motion_ = 0;
 	base_stn_ = -1;
@@ -414,7 +416,10 @@ MobileNode::set_destination(double x, double y, double s)
 		return -1;
 	
 	update_position();	// figure out where we are now
-	
+
+	//original_X_ = X_;
+	//original_Y_ = Y_;
+	//original_time_ = Scheduler::instance().clock();	
 	destX_ = x;
 	destY_ = y;
 	speed_ = s;

@@ -145,6 +145,9 @@ public:
 	inline double Y() { return Y_; }
 	inline double Z() { return Z_; }
 	inline double speed() { return speed_; }
+	//inline double originalX() { return original_X_; }
+	//inline double originalY() { return original_Y_; }
+	//inline double originalTime() { return original_time_; }
 	inline double dX() { return dX_; }
 	inline double dY() { return dY_; }
 	inline double dZ() { return dZ_; }
@@ -164,6 +167,12 @@ public:
 	MobileNode* prevX_;
 	
 protected:
+	/*
+	 * storing initial coordinates
+	 */
+	//double original_X_;
+	//double original_Y_;
+	//double original_time_;
 	/*
 	 * Last time the position of this node was updated.
 	 */

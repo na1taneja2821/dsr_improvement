@@ -211,7 +211,7 @@ private:
   void handlePacketReceipt(SRPacket& p);
   void handleForwarding(SRPacket& p);
   void handleRouteRequest(SRPacket& p);
-	void sendOutDirectionPacket(double, double, int);
+	void sendOutDirectionPacket(int);
 	double calcDistance(double, double, double, double);
 	//double calcTimeOut(double x1, double x2, double y1, double y2, double dt, double radius);
 	void handleDirectionPacket(SRPacket& p);
