@@ -358,7 +358,7 @@ send_buf_timer(this), flow_table(), ars_table()
 {
   int c;
   route_request_num = 1;
-
+	nextCalcTime = -1;
   route_cache = makeRouteCache();
 
   for (c = 0 ; c < RTREP_HOLDOFF_SIZE ; c++)
@@ -373,6 +373,12 @@ send_buf_timer(this), flow_table(), ars_table()
     grat_hold[c].t = 0;
     grat_hold[c].p.reset();
   }
+
+	for(c = 0; c < MAX_NEIGHBOURS; c++) {
+		neighbourLoc[c].id.t = -2;
+		neighbourTimeOut[c].id.t = -2;
+	}
+		
 
   //bind("off_SR_", &off_sr_);
   //bind("off_ll_", &off_ll_);
@@ -446,6 +452,10 @@ DSRAgent::command(int argc, const char*const* argv)
   TclObject *obj;  
 
 	
+	if (strcasecmp(argv[1], "sendout-direction-packet") == 0) {
+		sendOutDirectionPacket(atof(argv[2]), atof(argv[3]), atoi(argv[4]));
+		return TCL_OK;
+	}
   if (argc == 2) 
     {
       if (strcasecmp(argv[1], "testinit") == 0)
@@ -490,7 +500,7 @@ DSRAgent::command(int argc, const char*const* argv)
           return route_cache->command(argc,argv);
 	}
 	if (strcasecmp(argv[1], "sendout-direction-packet") == 0) {
-		sendOutDirectionPacket();
+		//sendOutDirectionPacket();
 		return TCL_OK;
 	}
     }
@@ -739,32 +749,177 @@ DSRAgent::handlePktWithoutSR(SRPacket& p, bool retry)
       return;
     } // end of we don't have a route
 }
-double DSRAgent::calcTimeOut(double x1, double x2, double y1, double y2, double dt, double radius) {
+void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) {
+	int i;
+	double presentTime = t;
+	//printf("Add to neighbour %d", node_ -> nodeid());
+	if(status == 1) {
+		for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourLoc[i].id == id) {	
+				NeighbourLoc temp;
+				temp.id = id;
+				temp.t = presentTime;
+				//temp.X = x;
+				//temp.Y = y;
+				temp.distance = calcDistance(
+							node_ -> X(),
+							x,
+							node_ -> Y(),
+							y);
+				neighbourLoc[i] = temp;
+				return;
+			}
+		}
+		for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourLoc[i].id.t == -2) {
+				NeighbourLoc temp;
+				temp.id = id;
+				temp.t = presentTime;
+				//temp.X = x;
+				//temp.Y = y;
+				printf("coords %lf %lf %lf %lf", node_ -> X(), x, node_ -> Y(), y);
+				temp.distance = calcDistance(
+							node_ -> X(),
+							x,
+							node_ -> Y(),
+							y);
+				neighbourLoc[i] = temp;
+				break;
+			}
+		}
+		
+		/*for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourLoc[i].id == id) {
+				printf("Inserted %lf\n", id.t);
+				break;
+			}
+		}*/
+	} else if(status == 2) {	
+		int index = -1;
+		//temp.id.t = -2;
+		printf("Checking \n");
+		//NeighbourTimeOut tempTime;
+		for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourLoc[i].id == id) {
+				index = i;
+				break;
+			}
+		}
+		if(index == -1 || neighbourLoc[index].id.t == -2) {
+			return;
+		}
+		double dt = presentTime - neighbourLoc[index].t;
+		printf("%lf\n", dt);
+		neighbourLoc[index].t = presentTime;
+		double newDist = calcDistance(node_ -> X(),
+						x,
+						node_ -> Y(),
+						y);
+		printf("Printing distance %lf - %lf\n", newDist, neighbourLoc[index].distance);
+		double velocity = (newDist - neighbourLoc[index].distance) / dt;
+		neighbourLoc[index].distance = newDist;
+		neighbourLoc[index].velocity = velocity;
+		printf("Printing velocity %lf\n", velocity);
+		if(velocity < 0) {
+			neighbourLoc[index].increases = false;
+		} else {
+			neighbourLoc[index].increases = true;
+		}
+		printf("Distance increases %d\n", neighbourLoc[index].increases);
+		
+	} else {
+		printf("Calculating\n");	
+		NeighbourLoc temp;
+		temp.id.t = -2;
+		//NeighbourTimeOut tempTime;
+		for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourLoc[i].id == id) {
+				temp = neighbourLoc[i];
+				break;
+			}
+		}
+		if(temp.id.t == -2) {
+			return;
+		}
+		double dt = presentTime - temp.t;
+		printf("%lf\n", dt);
+		double newDist = calcDistance(node_ -> X(),
+						x,
+						node_ -> Y(),
+						y);
+		
+		double velocity = (newDist - temp.distance) / dt;
+		double acceleration = (velocity - temp.velocity) / dt;
+		// (beta)
+		double x, h, vNode;
+		printf("Printing distance %lf - %lf\n", newDist, temp.distance);
+		printf("Printing new velocity %lf\n", velocity);
+		printf("Printing new acceleration %lf\n", acceleration);
+		//printf("Printing %lf %lf %lf\n", temp.velocity, acceleration, temp.distance);
+		//printf("%lf\n", temp.distance * acceleration + temp.velocity * temp.velocity);
+		vNode = sqrt(temp.distance * acceleration + temp.velocity * temp.velocity);
+		printf("Calculated velocity %lf\n", vNode);
+		//printf("Hello %lf", vNode);
+		x = temp.distance * temp.velocity / vNode;
+		printf("Printing x %lf\n", x);
+		/*if(!temp.increases) {
+			x = -x;
+		}*/
+		h = sqrt(temp.distance * temp.distance - x * x);
+		printf("Printing Minimum distance %lf\n", h);
+		double radius = 250;	
+		double timeOut = sqrt(radius * radius - h * h);
+		timeOut -= x;
+		timeOut = timeOut / (vNode);
+		NeighbourTimeOut tempTimeOut;
+		tempTimeOut.id.t = -2;
+		for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourTimeOut[i].id == id) {
+				neighbourTimeOut[i].timeOut = timeOut;
+				tempTimeOut = neighbourTimeOut[i];
+				break;
+			}
+		}
+		if(tempTimeOut.id.t == -2) {			
+			for(i = 0; i < MAX_NEIGHBOURS; i++) {
+				if(neighbourTimeOut[i].id.t == -1) {
+					neighbourTimeOut[i].timeOut = timeOut;
+					neighbourTimeOut[i].id = id;
+					break;
+				}
+			}
+		}
+		printf("Timeout between nodes %d and %d is %lf\n", node_ -> nodeid(), id.addr, timeOut);
+		
+	}
+}
+double DSRAgent::calcDistance(double x1, double x2, double y1, double y2) {
+	return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+}	
+/*NeighbourTimeOut DSRAgent::calcTimeOut(double x1, double x2, double y1, double y2, double dt, double radius) {
+	NeighbourTimeOut temp; 
 	double my_x = node_ -> X();
 	double my_y = node_ -> Y();
 	double distance1 = sqrt((my_x - x1) * (my_x - x1) + (my_y - y1) * (my_y - y1));
 	double distance2 = sqrt((my_x - x2) * (my_x - x2) + (my_y - y2) * (my_y - y2));
-	double velocity = abs(distance1 - distance2) / dt;
+	double velocity = (distance1 - distance2) / dt;
 	double distLeft = 0;
 	if(distance1 < distance2) {
 		distLeft = radius - distance2;
 	} else {
 		distLeft = radius + distance2;
 	}
+	temp.velocity = velocity;
 	if(velocity == 0) {
-		return 300.0;
-	}
-	return distLeft / velocity;
-}
+		temp.t =  300.0;
+	} else 
+		temp.t = fabs(distLeft / velocity);
+	temp.presentTime = Scheduler::instance.clock();
+	return temp;
+}*/
 void DSRAgent::handleDirectionPacket(SRPacket& p) {
 	hdr_sr *srh = hdr_sr::access(p.pkt);
-	if(srh -> direction_eval() == 1) {
-		addToList(p.src, srh -> dir_x(), srh -> dir_y());
-	} else {
-		struct coord temp = findFromList(p.src); 
-		calcTimeOut(coord.x, srh -> dir_x(), coord.y, srh -> dir_y(), node_ -> radius());
-		// Add the code for timeout reply
-	}
+	addToNeighbourLoc(p.src, srh -> dir_x(), srh -> dir_y(), srh -> direction_eval(), srh -> dir_time());
 }	
 void
 DSRAgent::handlePacketReceipt(SRPacket& p)
@@ -1293,7 +1448,7 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   return true;
 }
 
-void DSRAgent::sendOutDirectionPacket() {
+void DSRAgent::sendOutDirectionPacket(double x, double y, int status) {
 	SRPacket p;
     p.src = net_id;
     p.pkt = allocpkt();
@@ -1313,7 +1468,11 @@ void DSRAgent::sendOutDirectionPacket() {
 
 
     srh->init();
-	srh -> direction_eval() = 1;
+	printf("Hi there status = %d", status);
+	srh -> direction_eval() = status;
+	srh -> dir_x() = x;
+	srh -> dir_y() = y;
+	srh -> dir_time() = Scheduler::instance().clock();
     Scheduler::instance().schedule(ll, p.pkt, 0);
 
     p.pkt = NULL; 
@@ -2685,6 +2844,7 @@ DSRAgent::xmitFailed(Packet *pkt, const char* reason)
      message to send to the orginator of the pkt (srh[0])
      p.pkt freed or handed off */
 {
+	printf("Route Error Occurred");
   hdr_sr *srh = hdr_sr::access(pkt);
   hdr_ip *iph = hdr_ip::access(pkt);
   hdr_cmn *cmh = hdr_cmn::access(pkt);

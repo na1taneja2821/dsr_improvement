@@ -72,6 +72,7 @@ class DSRAgent;
 #include "requesttable.h"
 #include "flowstruct.h"
 
+#define MAX_NEIGHBOURS 50
 #define BUFFER_CHECK 0.03	// seconds between buffer checks
 #define RREQ_JITTER 0.010	// seconds to jitter broadcast route requests
 #define SEND_TIMEOUT 30.0	// # seconds a packet can live in sendbuf
@@ -99,6 +100,24 @@ struct GratReplyHoldDown {
   Time t;
   Path p;
 };
+
+struct NeighbourTimeOut {
+	Time timeOut;
+	//Time presentTime;
+	ID id;
+	//double velocity;
+	//double acceleration;
+};
+
+struct NeighbourLoc {
+	ID id;
+	Time t;
+	bool increases;
+	double distance; //(D)
+	double velocity; //(alpha)
+};
+
+
 
 class SendBufferTimer : public TimerHandler {
 public:
@@ -170,6 +189,11 @@ private:
   GratReplyHoldDown grat_hold[RTREP_HOLDOFF_SIZE];
   int grat_hold_victim;
 
+	/* My Storage to calculate timeout */
+	NeighbourTimeOut neighbourTimeOut[MAX_NEIGHBOURS];
+	NeighbourLoc neighbourLoc[MAX_NEIGHBOURS];
+	Time nextCalcTime;
+
   /* for flow state ych 5/2/01 */
   FlowTable flow_table;
   ARSTable  ars_table;
@@ -186,8 +210,17 @@ private:
   /* obtain a source route to p's destination and send it off */
   void handlePacketReceipt(SRPacket& p);
   void handleForwarding(SRPacket& p);
-  void handleRouteRequest(SRPacket &p);
-	void sendOutDirectionPacket();
+  void handleRouteRequest(SRPacket& p);
+	void sendOutDirectionPacket(double, double, int);
+	double calcDistance(double, double, double, double);
+	//double calcTimeOut(double x1, double x2, double y1, double y2, double dt, double radius);
+	void handleDirectionPacket(SRPacket& p);
+
+	/* Function for accessing the NeighbourTimeOut and NeighbourLoc
+ caches*/
+	void addToNeighbourLoc(ID id, double x, double y, int status, Time t);
+	void addToTimeOut(ID id, Time t);
+	
   /* process a route request that isn't targeted at us */
 
   /* flow state handle functions ych */
