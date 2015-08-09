@@ -193,6 +193,14 @@ private:
 	NeighbourTimeOut neighbourTimeOut[MAX_NEIGHBOURS];
 	NeighbourLoc neighbourLoc[MAX_NEIGHBOURS];
 	Time nextCalcTime;
+	Time timeout;
+	Time prevReqTime;
+	Time nextCalcPeriod;
+	Time currentReqTime;
+	bool flag;
+	bool flag1;
+	bool flag2;
+	bool flag3;
 
   /* for flow state ych 5/2/01 */
   FlowTable flow_table;
@@ -215,7 +223,9 @@ private:
 	double calcDistance(double, double, double, double);
 	//double calcTimeOut(double x1, double x2, double y1, double y2, double dt, double radius);
 	void handleDirectionPacket(SRPacket& p);
-
+	void handleTimeoutPacket(SRPacket& p);
+	void updateTimeout();
+	void updateNeighbourTimeOut(ID, Time);
 	/* Function for accessing the NeighbourTimeOut and NeighbourLoc
  caches*/
 	void addToNeighbourLoc(ID id, double x, double y, int status, Time t);

@@ -373,13 +373,13 @@ send_buf_timer(this), flow_table(), ars_table()
     grat_hold[c].t = 0;
     grat_hold[c].p.reset();
   }
-
+	currentReqTime = nextCalcTime = timeout = prevReqTime = nextCalcPeriod = 0.0;
 	for(c = 0; c < MAX_NEIGHBOURS; c++) {
 		neighbourLoc[c].id.t = -2;
 		neighbourTimeOut[c].id.t = -2;
 	}
 		
-
+	//bind("next_calc_time_", &nextCalcTime);
   //bind("off_SR_", &off_sr_);
   //bind("off_ll_", &off_ll_);
   //bind("off_mac_", &off_mac_);
@@ -454,6 +454,10 @@ DSRAgent::command(int argc, const char*const* argv)
 	
 	if (strcasecmp(argv[1], "sendout-direction-packet") == 0) {
 		sendOutDirectionPacket(atoi(argv[2]));
+		return TCL_OK;
+	}
+	if(strcasecmp(argv[1], "update-timeout") == 0) {
+		updateTimeout();
 		return TCL_OK;
 	}
   if (argc == 2) 
@@ -875,24 +879,39 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 		double timeOut = sqrt(radius * radius - h * h);
 		timeOut -= x;
 		timeOut = timeOut / (vNode);
-		NeighbourTimeOut tempTimeOut;
-		tempTimeOut.id.t = -2;
+		NeighbourLoc temp2;
+		temp2.id.t = -2;
 		for(i = 0; i < MAX_NEIGHBOURS; i++) {
-			if(neighbourTimeOut[i].id == id) {
-				neighbourTimeOut[i].timeOut = timeOut;
-				tempTimeOut = neighbourTimeOut[i];
+			if(neighbourLoc[i].id == id) {
+				neighbourLoc[i] = temp2;
 				break;
 			}
 		}
-		if(tempTimeOut.id.t == -2) {			
-			for(i = 0; i < MAX_NEIGHBOURS; i++) {
-				if(neighbourTimeOut[i].id.t == -1) {
-					neighbourTimeOut[i].timeOut = timeOut;
-					neighbourTimeOut[i].id = id;
-					break;
-				}
-			}
-		}
+		
+  		SRPacket p;
+  		p.dest = id;
+  		p.src = net_id;
+  		p.pkt = allocpkt();
+
+  		hdr_sr *srh = hdr_sr::access(p.pkt); 
+  		hdr_ip *iph = hdr_ip::access(p.pkt);
+  		hdr_cmn *cmnh =  hdr_cmn::access(p.pkt);
+  
+  		iph->daddr() = Address::instance().create_ipaddr(p.dest.getNSAddr_t(),RT_PORT);
+  		iph->dport() = RT_PORT;
+  		iph->saddr() = Address::instance().create_ipaddr(net_id.getNSAddr_t(),RT_PORT);
+  		iph->sport() = RT_PORT;
+		iph -> ttl() = 1;
+  		cmnh->ptype() = PT_DSR;
+  		cmnh->size() = size_ + IP_HDR_LEN; // add in IP header
+  		//cmnh->num_forwards() = 0;
+  
+  		srh->init();
+		srh -> link_timeout() = 1;
+		srh -> link_timeout_time() = timeOut;
+		Scheduler::instance().schedule(ll, p.pkt, 0.0);
+		p.pkt = NULL;
+		updateNeighbourTimeOut(id, timeout);
 		printf("Timeout between nodes %d and %d is %lf\n", node_ -> nodeid(), id.addr, timeOut);
 		
 	}
@@ -924,7 +943,54 @@ double DSRAgent::calcDistance(double x1, double x2, double y1, double y2) {
 void DSRAgent::handleDirectionPacket(SRPacket& p) {
 	hdr_sr *srh = hdr_sr::access(p.pkt);
 	addToNeighbourLoc(p.src, srh -> dir_x(), srh -> dir_y(), srh -> direction_eval(), srh -> dir_time());
-}	
+}
+void DSRAgent::updateNeighbourTimeOut(ID id, Time timeout) {
+	int i;
+	for(i = 0; i < MAX_NEIGHBOURS; i++) {
+		if(neighbourTimeOut[i].id == id) {
+			neighbourTimeOut[i].timeOut = timeout + Scheduler::instance().clock();
+			break;
+		} else if(neighbourTimeOut[i].timeOut <= Scheduler::instance().clock()) {
+			neighbourTimeOut[i].id.t = -2;
+		}
+	}
+	if(i == MAX_NEIGHBOURS) {
+		for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourTimeOut[i].id.t == -2) {
+				neighbourTimeOut[i].id = id;
+				neighbourTimeOut[i].timeOut = timeout + Scheduler::instance().clock();
+				break;
+			}
+		}
+	}
+}
+void DSRAgent::handleTimeoutPacket(SRPacket& p) {
+	hdr_sr *srh = hdr_sr::access(p.pkt);
+	flag = true;
+	if(currentReqTime + 0.2 >= Scheduler::instance().clock()) {
+		timeout = (timeout != 0.0 ? timeout : 500.0) < srh -> link_timeout_time() ? timeout : srh -> link_timeout_time();
+		updateNeighbourTimeOut(p.src, timeout);
+	} else {
+		printf("It reached me late!!!\n");
+	}
+}
+void DSRAgent::updateTimeout() {
+	if(!flag) 
+		return;
+	printf("timeout %lf\n", timeout);
+	//if(nextCalcPeriod == 0)
+		nextCalcPeriod = (nextCalcPeriod + timeout) / 2;
+	//else
+	//	nextCalcPeriod = (nextCalcPeriod + timeout - prevReqTime) / 2;
+	printf("nextCalcPeriod %lf\n", nextCalcPeriod);
+	if(nextCalcPeriod < 5.0) {
+		nextCalcPeriod = 5.0;
+	}
+	nextCalcTime = nextCalcPeriod + currentReqTime;
+	timeout += currentReqTime;
+	printf("timeout = %lf\nnextCalcTime = %lf\n", timeout, nextCalcTime);
+	flag = false;
+}
 void
 DSRAgent::handlePacketReceipt(SRPacket& p)
   /* Handle a packet destined to us */
@@ -934,6 +1000,10 @@ DSRAgent::handlePacketReceipt(SRPacket& p)
   hdr_sr *srh =  hdr_sr::access(p.pkt);
 	if(srh -> direction_eval()) {
 		handleDirectionPacket(p);
+		return;
+	}
+	if(srh -> link_timeout()) {
+		handleTimeoutPacket(p);
 		return;
 	}
   if (srh->route_reply())
@@ -1020,7 +1090,6 @@ DSRAgent::handleDefaultForwarding(SRPacket &p) {
 
   handleFlowForwarding(p, flowidx);
 }
-
 void
 DSRAgent::handleFlowForwarding(SRPacket &p, int flowidx) {
   hdr_sr *srh = hdr_sr::access(p.pkt);
@@ -1453,6 +1522,27 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
 }
 
 void DSRAgent::sendOutDirectionPacket(int status) {
+	printf("Yo %lf %lf %d %d\n", nextCalcTime, Scheduler::instance().clock(), flag1, flag2);
+	if(flag || Scheduler::instance().clock() < nextCalcTime) {
+		return;
+	}
+	if(!flag1 && status != 1) {
+		return;
+	} else if(flag1 && !flag2 && status != 2) {
+		return;
+	} else if(flag1 && flag2 && !flag3 && status != 3) {
+		return;
+	}
+	if(status == 1) {
+		flag1 = 1;
+	}
+	if(status == 2) {
+		flag2 = 1;
+	}
+	if(status == 3) {
+		flag1 = flag2 = 0;
+	}
+	
 	SRPacket p;
     p.src = net_id;
     p.pkt = allocpkt();
@@ -1481,6 +1571,10 @@ void DSRAgent::sendOutDirectionPacket(int status) {
 	srh -> direction_eval() = status;
 	srh -> dir_x() = myX;
 	srh -> dir_y() = myY;
+	if(status == 3) {
+		prevReqTime = currentReqTime;
+		currentReqTime = Scheduler::instance().clock();
+	}
     Scheduler::instance().schedule(ll, p.pkt, 0);
 
     p.pkt = NULL; 
