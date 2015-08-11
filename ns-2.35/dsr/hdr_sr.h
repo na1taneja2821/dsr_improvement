@@ -92,12 +92,14 @@ struct route_request {
 	int	req_valid_;	/* request header is valid? */
 	int	req_id_;	/* unique request identifier */
 	int	req_ttl_;	/* max propagation */
+	double	path_timeout_;
 };
 
 struct route_reply {
 	int	rep_valid_;	/* reply header is valid? */
 	int	rep_rtlen_;	/* # hops in route reply */
 	struct sr_addr	rep_addrs_[MAX_SR_LEN];
+	double path_timeout_;
 };
 
 struct route_error {
@@ -195,10 +197,12 @@ public:
 
 	inline int& route_request() {return sr_request_.req_valid_; }
 	inline int& rtreq_seq() {return sr_request_.req_id_; }
+	inline double& route_req_path_timeout() { return sr_request_.path_timeout_; }
 	inline int& max_propagation() {return sr_request_.req_ttl_; }
 
 	inline int& route_reply() {return sr_reply_.rep_valid_; }
 	inline int& route_reply_len() {return sr_reply_.rep_rtlen_; }
+	inline double& route_rep_path_timeout() { return sr_reply_.path_timeout_; };
 	inline struct sr_addr* reply_addrs() {return sr_reply_.rep_addrs_; }
 
 	inline int& route_error() {return sr_error_.err_valid_; }

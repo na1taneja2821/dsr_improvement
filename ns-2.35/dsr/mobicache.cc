@@ -105,10 +105,10 @@ public:
   int pickVictim(int exclude = -1);
   // returns the index of a suitable victim in the cache
   // will spare the life of exclude
-  bool searchRoute(const ID& dest, int& i, Path &path, int &index);
+  bool searchRoute(const ID& dest, int& i, Path &path, int &index, double &timeout);
   // look for dest in cache, starting at index, 
   //if found, rtn true with path s.t. cache[index] == path && path[i] == dest
-  Path* addRoute(Path &route, int &prefix_len);
+  Path* addRoute(Path &route, int &prefix_len, double timeout);
   // rtns a pointer the path in the cache that we added
   void noticeDeadLink(const ID&from, const ID& to);
 	void checkCacheForTimeOut();
@@ -138,12 +138,12 @@ public:
   // the link from->to isn't working anymore, purge routes containing
   // it from the cache
   void noticeRouteUsed(const Path& route, Time t,
-		       const ID& who_from);
+		       const ID& who_from, double timeout);
   // tell the cache about a route we saw being used
-  void addRoute(const Path& route, Time t, const ID& who_from);
+  void addRoute(const Path& route, Time t, const ID& who_from, double timeout);
   // add this route to the cache (presumably we did a route request
   // to find this route and don't want to lose it)
-  bool findRoute(ID dest, Path& route, int for_use = 0);
+  bool findRoute(ID dest, Path& route, int for_use, double& timeout);
   // if there is a cached path from us to dest returns true and fills in
   // the route accordingly. returns false otherwise
   // if for_use, then we assume that the node really wants to keep 
@@ -340,7 +340,7 @@ MobiCache::periodic_checkCache()
 ----------------------------------------------------------------*/
 
 void
-MobiCache::addRoute(const Path& route, Time t, const ID& who_from)
+MobiCache::addRoute(const Path& route, Time t, const ID& who_from, double timeout)
 // add this route to the cache (presumably we did a route request
 // to find this route and don't want to lose it)
 // who_from is the id of the routes provider
@@ -354,10 +354,10 @@ MobiCache::addRoute(const Path& route, Time t, const ID& who_from)
   int prefix_len = 0;
 
 #ifdef DSR_CACHE_STATS
-  Path *p = primary_cache->addRoute(rt, prefix_len);
+  Path *p = primary_cache->addRoute(rt, prefix_len, timeout);
   checkRoute(p, ACTION_ADD_ROUTE, prefix_len);
 #else
-  (void) primary_cache->addRoute(rt, prefix_len);
+  (void) primary_cache->addRoute(rt, prefix_len, timeout);
 #endif
 }
 
@@ -378,7 +378,7 @@ MobiCache::noticeDeadLink(const ID&from, const ID& to, Time)
 
 
 void
-MobiCache::noticeRouteUsed(const Path& p, Time t, const ID& who_from)
+MobiCache::noticeRouteUsed(const Path& p, Time t, const ID& who_from, double timeout)
 // tell the cache about a route we saw being used
 {
   Path stub;
@@ -388,15 +388,15 @@ MobiCache::noticeRouteUsed(const Path& p, Time t, const ID& who_from)
   int prefix_len = 0;
 
 #ifdef DSR_CACHE_STATS
-  Path *p0 = secondary_cache->addRoute(stub, prefix_len);
+  Path *p0 = secondary_cache->addRoute(stub, prefix_len, timeout);
   checkRoute(p0, ACTION_NOTICE_ROUTE, prefix_len);
 #else
-  (void) secondary_cache->addRoute(stub, prefix_len);
+  (void) secondary_cache->addRoute(stub, prefix_len, timeout);
 #endif
 }
 
 bool
-MobiCache::findRoute(ID dest, Path& route, int for_me)
+MobiCache::findRoute(ID dest, Path& route, int for_me, double& timeout)
 // if there is a cached path from us to dest returns true and fills in
 // the route accordingly. returns false otherwise
 // if for_me, then we assume that the node really wants to keep 
@@ -409,23 +409,25 @@ MobiCache::findRoute(ID dest, Path& route, int for_me)
   int min_cache = 0;		// 2 == primary, 1 = secondary
   int index;
   int len;
+	double tempTimeOut;
 
   assert(!(net_id == invalid_addr));
 
   index = 0;
-  while (primary_cache->searchRoute(dest, len, path, index))
+  while (primary_cache->searchRoute(dest, len, path, index, tempTimeOut))
     {
       min_cache = 2;
       if (len < min_length)
 	{
 	  min_length = len;
 	  route = path;
+		timeout = tempTimeOut;
 	}
       index++;
     }
   
   index = 0;
-  while (secondary_cache->searchRoute(dest, len, path, index))
+  while (secondary_cache->searchRoute(dest, len, path, index, tempTimeOut))
     {
       if (len < min_length)
 	{
@@ -433,6 +435,7 @@ MobiCache::findRoute(ID dest, Path& route, int for_me)
 	  min_cache = 1;
 	  min_length = len;
 	  route = path;
+		timeout = tempTimeOut;
 	}
       index++;
     }
@@ -441,7 +444,7 @@ MobiCache::findRoute(ID dest, Path& route, int for_me)
     { // promote the found route to the primary cache
       int prefix_len;
  
-      primary_cache->addRoute(secondary_cache->cache[min_index], prefix_len);
+      primary_cache->addRoute(secondary_cache->cache[min_index], prefix_len, timeout);
 
       // no need to run checkRoute over the Path* returned from
       // addRoute() because whatever was added was already in
@@ -522,7 +525,7 @@ Cache::~Cache()
 }
 
 bool 
-Cache::searchRoute(const ID& dest, int& i, Path &path, int &index)
+Cache::searchRoute(const ID& dest, int& i, Path &path, int &index, double& timeout)
   // look for dest in cache, starting at index, 
   //if found, return true with path s.t. cache[index] == path && path[i] == dest
 {
@@ -533,13 +536,14 @@ Cache::searchRoute(const ID& dest, int& i, Path &path, int &index)
 	{
 	  i = n;
 	  path = cache[index];
+		timeout = timeOut[index];
 	  return true;
 	}
   return false;
 }
 
 Path*
-Cache::addRoute(Path & path, int &common_prefix_len)
+Cache::addRoute(Path & path, int &common_prefix_len, double timeout)
 {
 	//checkCacheForTimeOut();
   int index, m, n;
@@ -558,7 +562,7 @@ Cache::addRoute(Path & path, int &common_prefix_len)
           common_prefix_len = n;
           for ( ; n < path.length() ; n++)
             cache[index].appendToPath(path[n]);
-		timeOut[index] = Scheduler::instance().clock();
+		timeOut[index] = timeout;
 
 	  if (verbose_debug)
 	    routecache->trace("SRC %.9f _%s_ %s suffix-rule (len %d/%d) %s",
@@ -595,6 +599,7 @@ Cache::addRoute(Path & path, int &common_prefix_len)
 	
   common_prefix_len = 0;
   index = victim; // remember which cache line we stuck the path into
+	timeOut[victim] = timeout;
 
 done:
 

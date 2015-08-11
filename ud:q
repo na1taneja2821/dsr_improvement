@@ -1,0 +1,171 @@
+[1mdiff --git a/ns-2.35/dsr/dsragent.cc b/ns-2.35/dsr/dsragent.cc[m
+[1mindex 2ffe118..a7559bd 100644[m
+[1m--- a/ns-2.35/dsr/dsragent.cc[m
+[1m+++ b/ns-2.35/dsr/dsragent.cc[m
+[36m@@ -1779,6 +1779,7 @@[m [mDSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)[m
+   // off it goes![m
+   if (srh->route_request())[m
+     { // route requests need to be jittered a bit[m
+[32m+[m	[32msrh -> route_req_path_timeout() = timeout < srh -> route_req_path_timeout() ? timeout : srh -> route_req_path_timeout();[m
+       Scheduler::instance().schedule(ll, p.pkt, [m
+ 				     Random::uniform(RREQ_JITTER) + delay);[m
+     }[m
+[36m@@ -1919,6 +1920,7 @@[m [mDSRAgent::sendOutRtReq(SRPacket &p, int max_prop)[m
+ [m
+   srh->route_request() = 1;[m
+   srh->rtreq_seq() = route_request_num++;[m
+[32m+[m	[32msrh -> route_req_path_timeout() = 500.0;[m
+   srh->max_propagation() = max_prop;[m
+   p.route.reset();[m
+   p.route.appendToPath(net_id);[m
+[36m@@ -1962,7 +1964,8 @@[m [mDSRAgent::returnSrcRouteToRequestor(SRPacket &p)[m
+   p_copy.pkt = allocpkt();[m
+   p_copy.dest = p.src;[m
+   p_copy.src = net_id;[m
+[31m-[m
+[32m+[m	[32mint i;[m
+[32m+[m	[32mfor(i = 0; i < MAX[m
+   p_copy.route.appendToPath(net_id);[m
+ [m
+   hdr_ip *new_iph =  hdr_ip::access(p_copy.pkt);[m
+[36m@@ -1977,6 +1980,7 @@[m [mDSRAgent::returnSrcRouteToRequestor(SRPacket &p)[m
+ [m
+   hdr_sr *new_srh =  hdr_sr::access(p_copy.pkt);[m
+   new_srh->init();[m
+[32m+[m	[32msrh -> route_req_path_timeout() = old_srh -> route_req_path_timeout;[m
+   for (int i = 0 ; i < p_copy.route.length() ; i++)[m
+     p_copy.route[i].fillSRAddr(new_srh->reply_addrs()[i]);[m
+   new_srh->route_reply_len() = p_copy.route.length();[m
+[1mdiff --git a/ns-2.35/dsr/hdr_sr.h b/ns-2.35/dsr/hdr_sr.h[m
+[1mindex 5a024be..5b42637 100644[m
+[1m--- a/ns-2.35/dsr/hdr_sr.h[m
+[1m+++ b/ns-2.35/dsr/hdr_sr.h[m
+[36m@@ -92,12 +92,14 @@[m [mstruct route_request {[m
+ 	int	req_valid_;	/* request header is valid? */[m
+ 	int	req_id_;	/* unique request identifier */[m
+ 	int	req_ttl_;	/* max propagation */[m
+[32m+[m	[32mdouble	path_timeout_;[m
+ };[m
+ [m
+ struct route_reply {[m
+ 	int	rep_valid_;	/* reply header is valid? */[m
+ 	int	rep_rtlen_;	/* # hops in route reply */[m
+ 	struct sr_addr	rep_addrs_[MAX_SR_LEN];[m
+[32m+[m	[32mdouble path_timeout_;[m
+ };[m
+ [m
+ struct route_error {[m
+[36m@@ -195,10 +197,12 @@[m [mpublic:[m
+ [m
+ 	inline int& route_request() {return sr_request_.req_valid_; }[m
+ 	inline int& rtreq_seq() {return sr_request_.req_id_; }[m
+[32m+[m	[32minline double& route_req_path_timeout() { return sr_request_.path_timeout_; }[m
+ 	inline int& max_propagation() {return sr_request_.req_ttl_; }[m
+ [m
+ 	inline int& route_reply() {return sr_reply_.rep_valid_; }[m
+ 	inline int& route_reply_len() {return sr_reply_.rep_rtlen_; }[m
+[32m+[m	[32minline double& route_rep_path_timeout() { return sr_reply_.path_timeout_ };[m
+ 	inline struct sr_addr* reply_addrs() {return sr_reply_.rep_addrs_; }[m
+ [m
+ 	inline int& route_error() {return sr_error_.err_valid_; }[m
+[1mdiff --git a/ns-2.35/dsr/mobicache.cc b/ns-2.35/dsr/mobicache.cc[m
+[1mindex 900bd92..4b22832 100644[m
+[1m--- a/ns-2.35/dsr/mobicache.cc[m
+[1m+++ b/ns-2.35/dsr/mobicache.cc[m
+[36m@@ -108,7 +108,7 @@[m [mpublic:[m
+   bool searchRoute(const ID& dest, int& i, Path &path, int &index);[m
+   // look for dest in cache, starting at index, [m
+   //if found, rtn true with path s.t. cache[index] == path && path[i] == dest[m
+[31m-  Path* addRoute(Path &route, int &prefix_len);[m
+[32m+[m[32m  Path* addRoute(Path &route, int &prefix_len, double timeout);[m
+   // rtns a pointer the path in the cache that we added[m
+   void noticeDeadLink(const ID&from, const ID& to);[m
+ 	void checkCacheForTimeOut();[m
+[36m@@ -138,9 +138,9 @@[m [mpublic:[m
+   // the link from->to isn't working anymore, purge routes containing[m
+   // it from the cache[m
+   void noticeRouteUsed(const Path& route, Time t,[m
+[31m-		       const ID& who_from);[m
+[32m+[m		[32m       const ID& who_from, double timeout);[m
+   // tell the cache about a route we saw being used[m
+[31m-  void addRoute(const Path& route, Time t, const ID& who_from);[m
+[32m+[m[32m  void addRoute(const Path& route, Time t, const ID& who_from, double timeout);[m
+   // add this route to the cache (presumably we did a route request[m
+   // to find this route and don't want to lose it)[m
+   bool findRoute(ID dest, Path& route, int for_use = 0);[m
+[36m@@ -340,7 +340,7 @@[m [mMobiCache::periodic_checkCache()[m
+ ----------------------------------------------------------------*/[m
+ [m
+ void[m
+[31m-MobiCache::addRoute(const Path& route, Time t, const ID& who_from)[m
+[32m+[m[32mMobiCache::addRoute(const Path& route, Time t, const ID& who_from, double timeout)[m
+ // add this route to the cache (presumably we did a route request[m
+ // to find this route and don't want to lose it)[m
+ // who_from is the id of the routes provider[m
+[36m@@ -354,15 +354,15 @@[m [mMobiCache::addRoute(const Path& route, Time t, const ID& who_from)[m
+   int prefix_len = 0;[m
+ [m
+ #ifdef DSR_CACHE_STATS[m
+[31m-  Path *p = primary_cache->addRoute(rt, prefix_len);[m
+[32m+[m[32m  Path *p = primary_cache->addRoute(rt, prefix_len, timeout);[m
+   checkRoute(p, ACTION_ADD_ROUTE, prefix_len);[m
+ #else[m
+[31m-  (void) primary_cache->addRoute(rt, prefix_len);[m
+[32m+[m[32m  (void) primary_cache->addRoute(rt, prefix_len, timeout);[m
+ #endif[m
+ }[m
+ [m
+ void[m
+[31m-MobiCache::noticeDeadLink(const ID&from, const ID& to, Time)[m
+[32m+[m[32mMobiCache::noticeDeadLink(const ID&from, const ID& to)[m
+   // the link from->to isn't working anymore, purge routes containing[m
+   // it from the cache[m
+ {[m
+[36m@@ -378,7 +378,7 @@[m [mMobiCache::noticeDeadLink(const ID&from, const ID& to, Time)[m
+ [m
+ [m
+ void[m
+[31m-MobiCache::noticeRouteUsed(const Path& p, Time t, const ID& who_from)[m
+[32m+[m[32mMobiCache::noticeRouteUsed(const Path& p, Time t, const ID& who_from, double timeout)[m
+ // tell the cache about a route we saw being used[m
+ {[m
+   Path stub;[m
+[36m@@ -388,10 +388,10 @@[m [mMobiCache::noticeRouteUsed(const Path& p, Time t, const ID& who_from)[m
+   int prefix_len = 0;[m
+ [m
+ #ifdef DSR_CACHE_STATS[m
+[31m-  Path *p0 = secondary_cache->addRoute(stub, prefix_len);[m
+[32m+[m[32m  Path *p0 = secondary_cache->addRoute(stub, prefix_len, timeout);[m
+   checkRoute(p0, ACTION_NOTICE_ROUTE, prefix_len);[m
+ #else[m
+[31m-  (void) secondary_cache->addRoute(stub, prefix_len);[m
+[32m+[m[32m  (void) secondary_cache->addRoute(stub, prefix_len, timeout);[m
+ #endif[m
+ }[m
+ [m
+[36m@@ -539,7 +539,7 @@[m [mCache::searchRoute(const ID& dest, int& i, Path &path, int &index)[m
+ }[m
+ [m
+ Path*[m
+[31m-Cache::addRoute(Path & path, int &common_prefix_len)[m
+[32m+[m[32mCache::addRoute(Path & path, int &common_prefix_len, double timeout)[m
+ {[m
+ 	//checkCacheForTimeOut();[m
+   int index, m, n;[m
+[36m@@ -558,7 +558,7 @@[m [mCache::addRoute(Path & path, int &common_prefix_len)[m
+           common_prefix_len = n;[m
+           for ( ; n < path.length() ; n++)[m
+             cache[index].appendToPath(path[n]);[m
+[31m-		timeOut[index] = Scheduler::instance().clock();[m
+[32m+[m		[32mtimeOut[index] = timeout[m
+ [m
+ 	  if (verbose_debug)[m
+ 	    routecache->trace("SRC %.9f _%s_ %s suffix-rule (len %d/%d) %s",[m
+[36m@@ -595,6 +595,7 @@[m [mCache::addRoute(Path & path, int &common_prefix_len)[m
+ 	[m
+   common_prefix_len = 0;[m
+   index = victim; // remember which cache line we stuck the path into[m
+[32m+[m	[32mtimeOut[victim] = timeout;[m
+ [m
+ done:[m
+ [m

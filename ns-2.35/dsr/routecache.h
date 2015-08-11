@@ -81,16 +81,16 @@ public:
   // it from the cache
 
   virtual void noticeRouteUsed(const Path& route, Time t, 
-			       const ID& who_from) = 0;
+			       const ID& who_from, Time timeout) = 0;
   // tell the cache about a route we saw being used
   // if first tested is set, then we assume the first link was recently
   // known to work
 
-  virtual void addRoute(const Path& route, Time t, const ID& who_from) = 0;
+  virtual void addRoute(const Path& route, Time t, const ID& who_from, Time timeout) = 0;
   // add this route to the cache (presumably we did a route request
   // to find this route and don't want to lose it)
 
-  virtual bool findRoute(ID dest, Path& route, int for_use) = 0;
+  virtual bool findRoute(ID dest, Path& route, int for_use, Time& timeout) = 0;
   // if there is a cached path from us to dest returns true and fills in
   // the route accordingly. returns false otherwise
   // if for_use, then we assume that the node really wants to keep 
