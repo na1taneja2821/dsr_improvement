@@ -227,13 +227,29 @@ void MobiCache::checkCacheForTimeOut() {
 void Cache::checkCacheForTimeOut() {
 	double currentTime = Scheduler::instance().clock();
 	int i;
-	
+	if(currentTime < 28.5)
+		printf("Congroo %lf\n", currentTime);
 	for(i = 0; i < size; i++) {
-		
-		if(timeOut[i] + timeLimit < currentTime) {
+		if(timeOut[i] > 0) {
+			int j;
+			printf("%lf\n", timeOut[i]);
+			for(j = 0; j < cache[i].length(); j++) {
+				printf("%u ", cache[i][j].addr);
+			}
+			printf("\n");
+		}
+	}
+	for(i = 0; i < size; i++) {
+		//printf("NO NO %lf\n", timeOut[i] + timeLimit);	
+		if(timeOut[i] != 0 && timeOut[i] - timeLimit < currentTime) {
+			//printf("NO NO NO %lf %lf\n", currentTime, timeOut[i]);
 			if(cache[i].length() > 0) {
-
-				cache[i].reset();
+				printf("clearing cache %lf\n", timeOut[i]);
+				int j;
+				for(j = 0; j < cache[i].length(); j++) {
+					printf("%u ", cache[i][j].addr);
+				} 
+				cache[i].reset();	
 			}
 		}
 	}
@@ -514,7 +530,10 @@ Cache::Cache(char *name, int size, MobiCache *rtcache)
   this->size = size;
   cache = new Path[size];
 	timeOut = new double[size];
-	memset(timeOut, 0, sizeof(timeOut));
+	int i;
+	for(i = 0; i < size; i++) {
+		timeOut[i] = 0.0;
+	}
   routecache = rtcache;
   victim_ptr = 0;
 }
@@ -529,7 +548,7 @@ Cache::searchRoute(const ID& dest, int& i, Path &path, int &index, double& timeo
   // look for dest in cache, starting at index, 
   //if found, return true with path s.t. cache[index] == path && path[i] == dest
 {
-	//checkCacheForTimeOut();
+	checkCacheForTimeOut();
   for (; index < size; index++)
     for (int n = 0 ; n < cache[index].length(); n++)
       if (cache[index][n] == dest) 
@@ -545,7 +564,12 @@ Cache::searchRoute(const ID& dest, int& i, Path &path, int &index, double& timeo
 Path*
 Cache::addRoute(Path & path, int &common_prefix_len, double timeout)
 {
-	//checkCacheForTimeOut();
+	checkCacheForTimeOut();
+	printf("Adding route with timeout %lf\n", timeout);
+	int i;
+	for(i = 0; i < path.length(); i++) {
+		printf("%u ", path[i].addr);
+	}
   int index, m, n;
   int victim;
 	
@@ -563,6 +587,7 @@ Cache::addRoute(Path & path, int &common_prefix_len, double timeout)
           for ( ; n < path.length() ; n++)
             cache[index].appendToPath(path[n]);
 		timeOut[index] = timeout;
+		//printf("I am storing timeout %lf\n", timeout);
 
 	  if (verbose_debug)
 	    routecache->trace("SRC %.9f _%s_ %s suffix-rule (len %d/%d) %s",
@@ -667,7 +692,7 @@ Cache::noticeDeadLink(const ID&from, const ID& to)
   // the link from->to isn't working anymore, purge routes containing
   // it from the cache
 { 
-//	checkCacheForTimeOut(); 
+	checkCacheForTimeOut(); 
   for (int p = 0 ; p < size ; p++)
     { // for all paths in the cache
       for (int n = 0 ; n < (cache[p].length()-1) ; n ++)

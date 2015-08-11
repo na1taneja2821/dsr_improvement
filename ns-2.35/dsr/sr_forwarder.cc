@@ -157,7 +157,8 @@ SRForwarder::handlePktWithoutSR(Packet *p)
 
   /* check route cache for source route for this packet */
   //if (routecache_->findRoute(ID(iph->daddr()>>8,::IP),path))
-  if (routecache_->findRoute(ID(iph->daddr(),::IP),path,0))
+	double timeout = 500.0;
+  if (routecache_->findRoute(ID(iph->daddr(),::IP),path,0, timeout))
     {
       srh->init();
       path.fillSR(srh);

@@ -104,7 +104,7 @@ DSRProto::testinit()
       hsr.append_addr( 3<<8, NS_AF_INET );
       hsr.append_addr( 4<<8, NS_AF_INET );
       
-      routecache->addRoute(Path(hsr.addrs(), hsr.num_addrs()), 0.0, ID(1,::IP));
+      routecache->addRoute(Path(hsr.addrs(), hsr.num_addrs()), 0.0, ID(1,::IP), 500.0);
     }
   
   if (net_id == ID(3,::IP))
@@ -115,7 +115,7 @@ DSRProto::testinit()
       hsr.append_addr( 2<<8, NS_AF_INET );
       hsr.append_addr( 1<<8, NS_AF_INET );
       
-      routecache->addRoute(Path(hsr.addrs(), hsr.num_addrs()), 0.0, ID(3,::IP));
+      routecache->addRoute(Path(hsr.addrs(), hsr.num_addrs()), 0.0, ID(3,::IP), 500.0);
     }
 }
 

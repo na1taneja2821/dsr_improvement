@@ -911,7 +911,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 		srh -> link_timeout_time() = timeOut;
 		Scheduler::instance().schedule(ll, p.pkt, 0.0);
 		p.pkt = NULL;
-		updateNeighbourTimeOut(id, timeout);
+		updateNeighbourTimeOut(id, timeOut);
 		printf("Timeout between nodes %d and %d is %lf\n", node_ -> nodeid(), id.addr, timeOut);
 		
 	}
@@ -946,6 +946,7 @@ void DSRAgent::handleDirectionPacket(SRPacket& p) {
 }
 void DSRAgent::updateNeighbourTimeOut(ID id, Time timeout) {
 	int i;
+	printf("timeOut %lf\n", timeout);
 	for(i = 0; i < MAX_NEIGHBOURS; i++) {
 		if(neighbourTimeOut[i].id == id) {
 			neighbourTimeOut[i].timeOut = timeout + Scheduler::instance().clock();
@@ -957,16 +958,26 @@ void DSRAgent::updateNeighbourTimeOut(ID id, Time timeout) {
 	if(i == MAX_NEIGHBOURS) {
 		for(i = 0; i < MAX_NEIGHBOURS; i++) {
 			if(neighbourTimeOut[i].id.t == -2) {
+				//printf("Yo");
 				neighbourTimeOut[i].id = id;
 				neighbourTimeOut[i].timeOut = timeout + Scheduler::instance().clock();
+				//printf("%lf\n", neighbourTimeOut[i].timeOut);
 				break;
 			}
+		}
+	
+	}
+	printf("Psy Printing present state for nodeid %d\n", node_ -> nodeid());
+	for(i = 0; i < MAX_NEIGHBOURS; i++) {
+		if(neighbourTimeOut[i].id.t != -2) {
+			printf("Psy %u %lf\n", neighbourTimeOut[i].id.addr, neighbourTimeOut[i].timeOut);
 		}
 	}
 }
 void DSRAgent::handleTimeoutPacket(SRPacket& p) {
 	hdr_sr *srh = hdr_sr::access(p.pkt);
 	flag = true;
+	updateNeighbourTimeOut(p.src, srh -> link_timeout_time());
 	if(currentReqTime + 0.2 >= Scheduler::instance().clock()) {
 		timeout = (timeout != 0.0 ? timeout : 500.0) < srh -> link_timeout_time() ? timeout : srh -> link_timeout_time();
 		updateNeighbourTimeOut(p.src, timeout);
@@ -1498,7 +1509,11 @@ double timeout = 500.0;
   // make up and send out a route reply
   p.route.appendToPath(net_id);
   p.route.reverseInPlace();
-	
+	printf("reply from route cache");
+	if(srh -> route_req_path_timeout() == 0 || srh -> route_req_path_timeout() == 500.0) {
+		printf("reply from route cache error");
+	}
+			
   route_cache->addRoute(p.route, Scheduler::instance().clock(), net_id, srh -> route_req_path_timeout());
 	double tempTimeout = srh -> route_req_path_timeout();
   p.dest = p.src;
@@ -1811,7 +1826,8 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
 				     Random::uniform(RREQ_JITTER) + delay);
     }
   else
-    { // no jitter required 
+    { // no jitter required
+	//rprintf("Send with route %d %lf\n", srh -> route_reply(), srh -> route_rep_path_timeout()); 
       Scheduler::instance().schedule(ll, p.pkt, delay);
     }
   p.pkt = NULL; /* packet sent off */
@@ -1942,6 +1958,7 @@ DSRAgent::sendOutRtReq(SRPacket &p, int max_prop)
   // set as specified
   // p.pkt is freed or handed off
 {
+	//if(!flag) return;
   hdr_sr *srh =  hdr_sr::access(p.pkt);
   assert(srh->valid());
 
@@ -1991,6 +2008,26 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   p_copy.pkt = allocpkt();
   p_copy.dest = p.src;
   p_copy.src = net_id;
+
+	double timeout = 500.0;
+	double currTime = Scheduler::instance().clock();
+	ID senderId = p.route[p.route.length() - 1];
+	printf("El Sender = %u, Me = %d %lf\n", senderId.addr, node_ -> nodeid(), Scheduler::instance().clock());
+	int i;
+	for(i = 0; i < MAX_NEIGHBOURS; i++) {
+		if(neighbourTimeOut[i].id.t != -2) {
+			printf("El %u %lf\n", neighbourTimeOut[i].id.addr, neighbourTimeOut[i].timeOut);
+		}
+	}	
+	for(i = 0; i < MAX_NEIGHBOURS; i++) {
+		if(neighbourTimeOut[i].timeOut < currTime) {
+			neighbourTimeOut[i].id.t = -2;
+		} else if(neighbourTimeOut[i].id == senderId) {
+			timeout = neighbourTimeOut[i].timeOut;
+			break;
+		} 
+	}
+	printf("El %d %lf\n",node_ -> nodeid(), timeout);
 	/*double currTime = Scheduler::instance().clock();
 	int i;
 	for(i = 0; i < MAX_NEIGHBOURS; i++) {
@@ -2014,7 +2051,10 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
 
   hdr_sr *new_srh =  hdr_sr::access(p_copy.pkt);
   new_srh->init();
-	new_srh -> route_req_path_timeout() = old_srh -> route_req_path_timeout();
+	new_srh -> route_rep_path_timeout() = timeout < old_srh -> route_req_path_timeout() ? timeout : old_srh -> route_req_path_timeout();
+	if(new_srh -> route_rep_path_timeout() - 1 < Scheduler::instance().clock()) {
+		return;
+	}
   for (int i = 0 ; i < p_copy.route.length() ; i++)
     p_copy.route[i].fillSRAddr(new_srh->reply_addrs()[i]);
   new_srh->route_reply_len() = p_copy.route.length();
@@ -2036,8 +2076,10 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   // flip the route around for the return to the requestor, and 
   // cache the route for future use
   p_copy.route.reverseInPlace();
-	
-  route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id, new_srh -> route_req_path_timeout());
+	if(new_srh -> route_rep_path_timeout() == 0 || new_srh -> route_rep_path_timeout() == 500.0) {
+		printf("return Src to route requestor error");
+	}	
+  route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id, new_srh -> route_rep_path_timeout());
 
   p_copy.route.resetIterator();
   p_copy.route.fillSR(new_srh);
@@ -2117,7 +2159,10 @@ DSRAgent::acceptRouteReply(SRPacket &p)
 	  reply_route.dump());
 
   // add the new route into our cache
-	
+	printf("route reply %lf", srh -> route_rep_path_timeout());
+	if(srh -> route_rep_path_timeout() == 0 || srh -> route_rep_path_timeout() == 500.0) {
+		printf("accept route reply error");	
+	}
   route_cache->addRoute(reply_route, Scheduler::instance().clock(), p.src, srh -> route_rep_path_timeout());
 
   // back down the route request counters
@@ -2630,7 +2675,10 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 	  p.route.dump());
 
   // cache the route for future use (we learned the route from p)
-	
+	printf("route shorteing");
+	if(timeout == 0 || timeout == 500.0) {
+		printf("router shortening error");
+	}	
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), p.src,  timeout);
   sendOutPacketWithRoute(p_copy, true);
 }
