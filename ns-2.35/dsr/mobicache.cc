@@ -227,8 +227,8 @@ void MobiCache::checkCacheForTimeOut() {
 void Cache::checkCacheForTimeOut() {
 	double currentTime = Scheduler::instance().clock();
 	int i;
-	if(currentTime < 28.5)
-		printf("Congroo %lf\n", currentTime);
+	//if(currentTime < 28.5)
+	//	printf("Congroo %lf\n", currentTime);
 	for(i = 0; i < size; i++) {
 		if(timeOut[i] > 0) {
 			int j;
