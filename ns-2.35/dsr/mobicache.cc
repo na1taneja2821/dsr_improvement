@@ -229,7 +229,7 @@ void Cache::checkCacheForTimeOut() {
 	int i;
 	//if(currentTime < 28.5)
 	//	printf("Congroo %lf\n", currentTime);
-	for(i = 0; i < size; i++) {
+	/*for(i = 0; i < size; i++) {
 		if(timeOut[i] > 0) {
 			int j;
 			printf("%lf\n", timeOut[i]);
@@ -238,17 +238,17 @@ void Cache::checkCacheForTimeOut() {
 			}
 			printf("\n");
 		}
-	}
+	}*/
 	for(i = 0; i < size; i++) {
 		//printf("NO NO %lf\n", timeOut[i] + timeLimit);	
 		if(timeOut[i] != 0 && timeOut[i] - timeLimit < currentTime) {
 			//printf("NO NO NO %lf %lf\n", currentTime, timeOut[i]);
 			if(cache[i].length() > 0) {
-				printf("clearing cache %lf\n", timeOut[i]);
+				/*printf("clearing cache %lf\n", timeOut[i]);
 				int j;
 				for(j = 0; j < cache[i].length(); j++) {
 					printf("%u ", cache[i][j].addr);
-				} 
+				} */
 				cache[i].reset();	
 			}
 		}
@@ -565,11 +565,11 @@ Path*
 Cache::addRoute(Path & path, int &common_prefix_len, double timeout)
 {
 	checkCacheForTimeOut();
-	printf("Adding route with timeout %lf\n", timeout);
-	int i;
+	//printf("Adding route with timeout %lf\n", timeout);
+	/*int i;
 	for(i = 0; i < path.length(); i++) {
 		printf("%u ", path[i].addr);
-	}
+	}*/
   int index, m, n;
   int victim;
 	

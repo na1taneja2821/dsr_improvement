@@ -812,7 +812,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 	} else if(status == 2) {	
 		int index = -1;
 		//temp.id.t = -2;
-		printf("Checking \n");
+		//	printf("Checking \n");
 		//NeighbourTimeOut tempTime;
 		for(i = 0; i < MAX_NEIGHBOURS; i++) {
 			if(neighbourLoc[i].id == id) {
@@ -824,27 +824,27 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 			return;
 		}
 		double dt = presentTime - neighbourLoc[index].t;
-		printf("%lf\n", dt);
+		//printf("%lf\n", dt);
 		neighbourLoc[index].t = presentTime;
 		double newDist = calcDistance(myX,
 						x,
 						myY,
 						y);
-		printf("Printing distance %lf - %lf\n", newDist, neighbourLoc[index].distance);
+		//printf("Printing distance %lf - %lf\n", newDist, neighbourLoc[index].distance);
 		double velocity = (newDist - neighbourLoc[index].distance) / dt;
 		neighbourLoc[index].distance = newDist;
 		neighbourLoc[index].velocity = velocity;
-		printf("Printing velocity %lf\n", velocity);
+		//printf("Printing velocity %lf\n", velocity);
 		if(velocity < 0) {
 			neighbourLoc[index].increases = false;
 		} else {
 			neighbourLoc[index].increases = true;
 		}
-		printf("Distance increases %d\n", neighbourLoc[index].increases);
+		//printf("Distance increases %d\n", neighbourLoc[index].increases);
 		
 	} else {
 		double timeOut = 500.0;
-		printf("Calculating\n");	
+		//printf("Calculating\n");	
 		NeighbourLoc temp;
 		temp.id.t = -2;
 		//NeighbourTimeOut tempTime;
@@ -854,7 +854,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 				break;
 			}
 		}
-		printf("%u %lf\n", temp.id.addr, temp.id.t);
+		//printf("%u %lf\n", temp.id.addr, temp.id.t);
 		if(temp.id.t == -2 || (temp.velocity > 500.0 && temp.velocity < -500.0) ) {
 			printf("Returning");
 			return;
@@ -865,7 +865,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 		} else {
 
 			double dt = presentTime - temp.t;
-			printf("%lf\n", dt);
+			//printf("%lf\n", dt);
 			double newDist = calcDistance(myX,
 							x,
 							myY,
@@ -884,37 +884,38 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 			}
 			// (beta)
 			double x = 0.0, h = 0.0, vNode = 0.0;
-			printf("Printing distance %lf - %lf\n", newDist, temp.distance);
-			printf("Printing prev velocity %lf\n", temp.velocity);
-			printf("Printing new velocity %lf\n", velocity);
-			printf("Printing new acceleration %lf\n", acceleration);
+			//printf("Printing distance %lf - %lf\n", newDist, temp.distance);
+			//printf("Printing prev velocity %lf\n", temp.velocity);
+			//printf("Printing new velocity %lf\n", velocity);
+			//printf("Printing new acceleration %lf\n", acceleration);
 			//printf("Printing %lf %lf %lf\n", temp.velocity, acceleration, temp.distance);
 			//printf("%lf\n", temp.distance * acceleration + temp.velocity * temp.velocity);
 			if((temp.distance * acceleration + temp.velocity * temp.velocity) > 0)
 				vNode = sqrt(temp.distance * acceleration + temp.velocity * temp.velocity);
-			else 
-				printf("negative");
-			printf("Calculated velocity %lf\n", vNode);
+			//else 
+				//printf("negative");
+			//printf("Calculated velocity %lf\n", vNode);
 			//printf("Hello %lf", vNode);
 			if(vNode > 0) 
 				x = temp.distance * temp.velocity / vNode;
-			else
-				printf("vNode negative\n");
-			printf("Printing x %lf\n", x);
+			//else
+				//printf("vNode negative\n");
+			//printf("Printing x %lf\n", x);
 			/*if(!temp.increases) {
 				x = -x;
 			}*/
 			if(temp.distance * temp.distance - x * x > 0)
 				h = sqrt(temp.distance * temp.distance - x * x);
-			else 
-				printf("h negative %lf %lf\n", temp.distance, x);
-			printf("Printing Minimum distance %lf\n", h);
+			//else 
+				//printf("h negative %lf %lf\n", temp.distance, x);
+			//printf("Printing Minimum distance %lf\n", h);
+			
 			double radius = 250;
 			timeOut = 500.0;
 			if(h < radius)	
 				timeOut = sqrt(radius * radius - h * h);
 			else 
-				printf("timeOut negative h = %lf, x = %lf, vNode = %lf, t.dist = %lf\n", h, x, vNode, temp.distance);
+				//printf("timeOut negative h = %lf, x = %lf, vNode = %lf, t.dist = %lf\n", h, x, vNode, temp.distance);
 			timeOut -= x;
 			if(vNode != 0.0)
 				timeOut = timeOut / (vNode);
@@ -1009,12 +1010,12 @@ void DSRAgent::updateNeighbourTimeOut(ID id, Time timeout) {
 		}
 	
 	}
-	printf("Psy Printing present state for nodeid %d\n", node_ -> nodeid());
-	for(i = 0; i < MAX_NEIGHBOURS; i++) {
+	//printf("Psy Printing present state for nodeid %d\n", node_ -> nodeid());
+	/*for(i = 0; i < MAX_NEIGHBOURS; i++) {
 		if(neighbourTimeOut[i].id.t != -2) {
 			printf("Psy %u %lf\n", neighbourTimeOut[i].id.addr, neighbourTimeOut[i].timeOut);
 		}
-	}
+	}*/
 }
 void DSRAgent::handleTimeoutPacket(SRPacket& p) {
 	hdr_sr *srh = hdr_sr::access(p.pkt);
@@ -1033,18 +1034,18 @@ void DSRAgent::handleTimeoutPacket(SRPacket& p) {
 void DSRAgent::updateTimeout() {
 	if(!flag) 
 		return;
-	printf("timeout %lf\n", timeout);
+	//printf("timeout %lf\n", timeout);
 	//if(nextCalcPeriod == 0)
 		nextCalcPeriod = (nextCalcPeriod + timeout) / 2;
 	//else
 	//	nextCalcPeriod = (nextCalcPeriod + timeout - prevReqTime) / 2;
-	printf("nextCalcPeriod %lf\n", nextCalcPeriod);
+	//printf("nextCalcPeriod %lf\n", nextCalcPeriod);
 	if(nextCalcPeriod < 5.0) {
 		nextCalcPeriod = 5.0;
 	}
 	nextCalcTime = nextCalcPeriod + currentReqTime;
 	timeout += currentReqTime;
-	printf("timeout = %lf\nnextCalcTime = %lf\n", timeout, nextCalcTime);
+	//printf("timeout = %lf\nnextCalcTime = %lf\n", timeout, nextCalcTime);
 	flag = false;
 	flag1 = flag2 = flag3 = false;
 }
@@ -1599,9 +1600,10 @@ double timeout = 500.0;
 
 void DSRAgent::sendOutDirectionPacket(int status) {
 	printf("Yo %d %d %lf %lf %d %d\n", node_ -> nodeid(), status, nextCalcTime, Scheduler::instance().clock(), flag1, flag2);
-	if(flag) {
+	if(flag || Scheduler::instance().clock() < nextCalcTime) {
 		return;
 	}
+	printf("Inside %lf %lf\n", Scheduler::instance().clock(), nextCalcTime);
 	if(!flag1 && status != 1) {
 		return;
 	} else if(flag1 && !flag2 && status != 2) {
@@ -2057,21 +2059,21 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   p_copy.dest = p.src;
   p_copy.src = net_id;
 
-	printf("El Path till now\nEl ");
+	//printf("El Path till now\nEl ");
 	int i;
-	for(i = 0; i < p.route.length(); i++) {
+	/*for(i = 0; i < p.route.length(); i++) {
 		printf("%u ", p.route[i].addr);
-	}
-	printf("\n");
+	}*/
+	//printf("\n");
 	double timeout = 500.0;
 	double currTime = Scheduler::instance().clock();
 	ID senderId = p.route[p.route.length() - 1];
-	printf("El Sender = %u, Me = %d %lf\n", senderId.addr, node_ -> nodeid(), Scheduler::instance().clock());
-	for(i = 0; i < MAX_NEIGHBOURS; i++) {
+	//printf("El Sender = %u, Me = %d %lf\n", senderId.addr, node_ -> nodeid(), Scheduler::instance().clock());
+	/*for(i = 0; i < MAX_NEIGHBOURS; i++) {
 		if(neighbourTimeOut[i].id.t != -2) {
 			printf("El %u %lf\n", neighbourTimeOut[i].id.addr, neighbourTimeOut[i].timeOut);
 		}
-	}	
+	}*/	
 	for(i = 0; i < MAX_NEIGHBOURS; i++) {
 		if(neighbourTimeOut[i].timeOut < currTime) {
 			neighbourTimeOut[i].id.t = -2;
@@ -2083,7 +2085,7 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
 	if(timeout == 500.0) {
 		timeout = 2.0 + Scheduler::instance().clock();
 	}
-	printf("El %d %lf\n",node_ -> nodeid(), timeout);
+	//printf("El %d %lf\n",node_ -> nodeid(), timeout);
 	/*double currTime = Scheduler::instance().clock();
 	int i;
 	for(i = 0; i < MAX_NEIGHBOURS; i++) {
