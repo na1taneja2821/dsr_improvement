@@ -910,7 +910,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 				//printf("h negative %lf %lf\n", temp.distance, x);
 			//printf("Printing Minimum distance %lf\n", h);
 			
-			double radius = 250;
+			double radius = 100;
 			timeOut = 500.0;
 			if(h < radius)	
 				timeOut = sqrt(radius * radius - h * h);
