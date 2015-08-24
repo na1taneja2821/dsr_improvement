@@ -861,7 +861,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 		}
 
 		if(calcDistance(myX, x, myY, y) > 100) {
-			timeOut = 2.0;
+			timeOut = 0.00;
 		} else {
 
 			double dt = presentTime - temp.t;
