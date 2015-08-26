@@ -861,7 +861,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 		}
 
 		if(calcDistance(myX, x, myY, y) > 100) {
-			timeOut = 0.00;
+			timeOut = 2.00;
 		} else {
 
 			double dt = presentTime - temp.t;
@@ -3125,8 +3125,14 @@ DSRAgent::xmitFailed(Packet *pkt, const char* reason)
      message to send to the orginator of the pkt (srh[0])
      p.pkt freed or handed off */
 {
-	printf("Route Error Occurred\n");
+	printf("Route Error Occurred %lf on me %d ", Scheduler::instance().clock(), node_ -> nodeid());
+	int i;
   hdr_sr *srh = hdr_sr::access(pkt);
+  SRPacket p1(pkt, srh);
+	for(i = 0; i < p1.route.length(); i++) {
+		printf("%u ", p1.route[i].addr);
+	}
+	printf("\n");
   hdr_ip *iph = hdr_ip::access(pkt);
   hdr_cmn *cmh = hdr_cmn::access(pkt);
 
