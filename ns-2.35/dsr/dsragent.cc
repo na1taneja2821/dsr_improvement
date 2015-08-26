@@ -2619,11 +2619,16 @@ DSRAgent::xmitFailed(Packet *pkt, const char* reason)
      message to send to the orginator of the pkt (srh[0])
      p.pkt freed or handed off */
 {
-	printf("Route Error Occurred\n");
+	printf("Route Error Occurred %lf on me %d ", Scheduler::instance().clock(), node_ -> nodeid());
   hdr_sr *srh = hdr_sr::access(pkt);
+	SRPacket p1(pkt, srh);
   hdr_ip *iph = hdr_ip::access(pkt);
   hdr_cmn *cmh = hdr_cmn::access(pkt);
-
+	int i;
+	for(i = 0; i < p1.route.length(); i++) {
+		printf("%u ", p1.route[i].addr);
+	}
+	printf("\n");
   assert(cmh->size() >= 0);
 
   srh->cur_addr() -= 1;		// correct for inc already done on sending
