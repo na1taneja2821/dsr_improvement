@@ -740,6 +740,8 @@ DSRAgent::handlePktWithoutSR(SRPacket& p, bool retry)
 	trace("S$hit %.5f _%s_ %s -> %s %s",
 	      Scheduler::instance().clock(), net_id.dump(),
 	      p.src.dump(), p.dest.dump(), p.route.dump());      
+	if(node_ -> nodeid() == 60) 
+		printf("\nNoro 7 %lf\n", Scheduler::instance().clock());
       sendOutPacketWithRoute(p, true);
       return;
     } // end if we have a route
@@ -952,6 +954,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
   		srh->init();
 		srh -> link_timeout() = 1;
 		srh -> link_timeout_time() = timeOut;
+		printf("\nGone 2 me: %d at: %lf\n", node_ -> nodeid(), Scheduler::instance().clock());
 		Scheduler::instance().schedule(ll, p.pkt, 0.0);
 		p.pkt = NULL;
 		updateNeighbourTimeOut(id, timeOut);
@@ -1019,9 +1022,9 @@ void DSRAgent::updateNeighbourTimeOut(ID id, Time timeout) {
 }
 void DSRAgent::handleTimeoutPacket(SRPacket& p) {
 	hdr_sr *srh = hdr_sr::access(p.pkt);
-	flag = true;
 	updateNeighbourTimeOut(p.src, srh -> link_timeout_time());
 	if(currentReqTime + 0.2 >= Scheduler::instance().clock()) {
+		flag = true;
 		timeout = (timeout != 0.0 ? timeout : 500.0) < srh -> link_timeout_time() ? timeout : srh -> link_timeout_time();
 		if(timeout >= 500.0) {
 			printf("Omna %lf\n", srh -> link_timeout_time());
@@ -1262,7 +1265,12 @@ DSRAgent::handleFlowForwarding(SRPacket &p) {
   // forward the packet
   handleFlowForwarding(p, flowidx);
 }
-
+double min(double a, double b) {
+	if(a < b) {
+		return a;
+	}
+	return b;
+}
 void
 DSRAgent::handleForwarding(SRPacket &p)
   /* forward packet on to next host in source route,
@@ -1301,15 +1309,23 @@ DSRAgent::handleForwarding(SRPacket &p)
   // if there's a source route, maybe we should snoop it too
 	double timeout = 500.0;
 	double currTime = Scheduler::instance().clock();
-	ID senderId = p.route[p.route.length()- 1]; 
-	int i;
-	for(i = 0; i < MAX_NEIGHBOURS; i++) {
-		if(neighbourTimeOut[i].timeOut < currTime) {
-			neighbourTimeOut[i].id.t = -2;
-		} else if(neighbourTimeOut[i].id == senderId) {
-			timeout = neighbourTimeOut[i].timeOut;
-			break;
-		} 
+	if(p.route.length() > 0) {
+		ID senderId = p.route[p.route.length()- 1]; 
+		int i;
+		for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourTimeOut[i].timeOut < currTime) {
+				neighbourTimeOut[i].id.t = -2;
+			} else if(neighbourTimeOut[i].id == senderId) {
+				timeout = neighbourTimeOut[i].timeOut;
+				break;
+			} 
+		}
+	}
+	if(srh -> route_request()) {
+		timeout = min(timeout, srh -> route_req_path_timeout());
+	}
+	if(srh -> route_reply()) {
+		timeout = min(timeout, srh -> route_rep_path_timeout());
 	}
   if (dsragent_snoop_source_routes)
     route_cache->noticeRouteUsed(p.route, Scheduler::instance().clock(), 
@@ -1327,6 +1343,8 @@ DSRAgent::handleForwarding(SRPacket &p)
   }
 
   // now forward the packet...
+	if(node_ -> nodeid() == 60) 
+		printf("\nNoro 8 %lf\n", Scheduler::instance().clock());
   sendOutPacketWithRoute(p, false);
 }
 
@@ -1446,6 +1464,8 @@ DSRAgent::handleRouteRequest(SRPacket &p)
           Scheduler::instance().clock(), net_id.dump(), p.src.dump(),
           srh->rtreq_seq(), p.dest.dump(), p.route.dump());
 
+	if(node_ -> nodeid() == 60) 
+		printf("\nNoro 9 %lf\n", Scheduler::instance().clock());
   sendOutPacketWithRoute(p, false);
   return;      
 }
@@ -1497,11 +1517,14 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   /* XXX what if we have more than 1?  (and one is legal for reply from
      cache and one isn't?) 1/28/97 -dam */
 double timeout = 500.0;
+double timeout2;
   if (!route_cache->findRoute(p.dest, rest_of_route, 0, timeout))
     { // no route => we're done
       return false;
     }
-
+	if(timeout == 0.0 && node_ -> nodeid() == 10) {
+		printf("Xperia ");
+	}
   /* but we should be on on the remainder of the route (and should be at
    the start of the route */
   assert(rest_of_route[0] == net_id || rest_of_route[0] == MAC_id);
@@ -1524,8 +1547,12 @@ double timeout = 500.0;
   // route request pkt, we need to forward it on to the dst
   hdr_cmn *cmh =  hdr_cmn::access(p.pkt);
   hdr_sr *srh =  hdr_sr::access(p.pkt);
+	/*if(node_ -> nodeid() == 47) {
+		printf("\nGomu 2 %lf\n", srh -> route_req_path_timeout());
+	}*/
+	
   int request_seqnum = srh->rtreq_seq();
-  
+  timeout2 = srh -> route_req_path_timeout(); // performing this as the else part will free the packet.
   if (PT_DSR != cmh->ptype()	// there's data
       || srh->route_reply()
       || (srh->route_error() && 
@@ -1544,7 +1571,8 @@ double timeout = 500.0;
       if (verbose) trace("Sdebug %.9f _%s_ splitting %s to %s",
                          Scheduler::instance().clock(), net_id.dump(),
                          p.route.dump(), p_copy.route.dump());
-
+	if(node_ -> nodeid() == 60) 
+		printf("\nNoro %lf\n", Scheduler::instance().clock());
       sendOutPacketWithRoute(p_copy,false);
     }
   else 
@@ -1557,12 +1585,20 @@ double timeout = 500.0;
   p.route.appendToPath(net_id);
   p.route.reverseInPlace();
 	printf("reply from route cache");
-	if(srh -> route_req_path_timeout() == 0 || srh -> route_req_path_timeout() == 500.0) {
-		printf("reply from route cache error");
+	if(timeout2 == 0 || timeout2 == 500.0) {
+		printf("reply from route cache error %lf ", timeout2);
 	}
-			
-  route_cache->addRoute(p.route, Scheduler::instance().clock(), net_id, srh -> route_req_path_timeout());
-	double tempTimeout = srh -> route_req_path_timeout();
+		
+  route_cache->addRoute(p.route, Scheduler::instance().clock(), net_id, timeout2);
+	printf("Dattebayo %d ", node_ -> nodeid());
+	if(node_ -> nodeid() == 60) {
+		int i;
+		for(i = 0; i < p.route.length(); i++) {
+			printf("%u ", p.route[i].addr);
+		}
+		printf("%lf\n", srh -> route_req_path_timeout());
+	}
+	//double tempTimeout = srh -> route_req_path_timeout();
   p.dest = p.src;
   p.src = net_id;
   p.pkt = allocpkt();
@@ -1580,7 +1616,7 @@ double timeout = 500.0;
     complete_route[i].fillSRAddr(srh->reply_addrs()[i]);
   srh->route_reply_len() = complete_route.length();
   srh->route_reply() = 1;
-	srh -> route_rep_path_timeout() = timeout < tempTimeout ? timeout : tempTimeout;
+	srh -> route_rep_path_timeout() = timeout < timeout2 ? timeout : timeout2;
 
   // propagate the request sequence number in the reply for analysis purposes
   srh->rtreq_seq() = request_seqnum;
@@ -1594,6 +1630,8 @@ double timeout = 500.0;
 	  Scheduler::instance().clock(), net_id.dump(),
 	  p.src.dump(), p.dest.dump(), request_seqnum, complete_route.length(),
 	  complete_route.dump());
+	if(node_ -> nodeid() == 60) 
+		printf("\nNoro 2 %lf\n", Scheduler::instance().clock());
   sendOutPacketWithRoute(p, true);
   return true;
 }
@@ -1620,7 +1658,7 @@ void DSRAgent::sendOutDirectionPacket(int status) {
 		flag2 = 1;
 	}
 	if(status == 3) {
-		flag3 = 0;
+		flag3 = 1;
 	}
 	
 	SRPacket p;
@@ -1655,6 +1693,7 @@ void DSRAgent::sendOutDirectionPacket(int status) {
 		prevReqTime = currentReqTime;
 		currentReqTime = Scheduler::instance().clock();
 	}
+	printf("\nGone me: %d at: %lf with status: %d\n", node_ -> nodeid(), Scheduler::instance().clock(), status);
     Scheduler::instance().schedule(ll, p.pkt, Random::uniform(RREQ_JITTER));
 
     p.pkt = NULL; 
@@ -1708,6 +1747,7 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
       // can't yet decode flow errors and route errors/replies together
       // so don't tempt the system... ych 5/7/01
       !srh->route_error() && !srh->route_reply()) {
+			
     hdr_ip *iph =  hdr_ip::access(p.pkt);
     int flowidx;
     u_int16_t flowid, default_flowid;
@@ -1800,6 +1840,10 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
 	srh->num_addrs() ? srh->dump() : "");
 
     cmnh->size() += srh->size();
+	if(node_ -> nodeid() == 60) {
+		printf("\nGomu %d %d %d %d %d %lf\n", srh -> route_request(), srh -> route_error(), srh -> route_reply(), srh -> direction_eval(), srh -> link_timeout(), Scheduler::instance().clock());
+	}
+	printf("Kyun Ho gaya na 2 %d ", node_ -> nodeid());
     cmnh->xmit_failure_ = srh->num_addrs() ? XmitFailureCallback : 
 					     XmitFlowFailureCallback;
     cmnh->xmit_failure_data_ = (void *) this;
@@ -1812,12 +1856,16 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
 
     if (srh->route_request())
       { // broadcast forward
+	/*if(node_ -> nodeid() == 47) {
+		printf("\nGomu %lf \n", srh -> route_req_path_timeout());
+	}*/
         cmnh->xmit_failure_ = 0;
         cmnh->next_hop() = MAC_BROADCAST;
         cmnh->addr_type() = NS_AF_ILINK;
       }
     else
       { // forward according to source route
+	printf("Kyun Ho gaya na 3 ");
         cmnh->xmit_failure_ = XmitFailureCallback;
         cmnh->xmit_failure_data_ = (void *) this;
 
@@ -1847,6 +1895,7 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
    * sounds like the source quench problem. ych 5/5/01
    */
   if(ifq->prq_isfull(p.pkt)) {
+	printf("Kyun Ho gaya na 1 ");
 	  xmitFailed(p.pkt, DROP_IFQ_QFULL);
 	  p.pkt = 0;
 	  return;
@@ -1859,19 +1908,27 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
   // off it goes!
   if (srh->route_request())
     { // route requests need to be jittered a bit
-	ID senderId = p.route[p.route.length()- 1];
 	double timeout = 500.0;
-	double currTime = Scheduler::instance().clock();
-	int i;
-	for(i = 0; i < MAX_NEIGHBOURS; i++) {
-		if(neighbourTimeOut[i].timeOut < currTime) {
-			neighbourTimeOut[i].id.t = -2;
-		} else if(neighbourTimeOut[i].id == senderId) {
-			timeout = neighbourTimeOut[i].timeOut;
-			break;
-		} 
+	if(p.route.length() > 1) {
+		ID senderId = p.route[p.route.length()- 2];
+		if(node_ -> nodeid() == 60 || node_ -> nodeid() == 10 || node_ -> nodeid() == 54) {
+			printf("Ode %d %u ", node_ -> nodeid(), senderId.addr);
+		}
+		double currTime = Scheduler::instance().clock();
+		int i;
+		for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourTimeOut[i].timeOut < currTime) {
+				neighbourTimeOut[i].id.t = -2;
+			} else if(neighbourTimeOut[i].id == senderId) {
+				timeout = neighbourTimeOut[i].timeOut;
+				break;
+			} 
+		}
 	}
 	srh -> route_req_path_timeout() = timeout < srh -> route_req_path_timeout() ? timeout : srh -> route_req_path_timeout();
+/*	if(node_ -> nodeid() == 47) {
+		printf("\nGomu %lf\n", srh -> route_req_path_timeout());
+	}*/
       Scheduler::instance().schedule(ll, p.pkt, 
 				     Random::uniform(RREQ_JITTER) + delay);
     }
@@ -2040,6 +2097,8 @@ DSRAgent::sendOutRtReq(SRPacket &p, int max_prop)
     trace("SRR %.5f _%s_ new-request %d %s #%d -> %s", 
 	  Scheduler::instance().clock(), net_id.dump(), 
 	  max_prop, p.src.dump(), srh->rtreq_seq(), p.dest.dump());
+	if(node_ -> nodeid() == 60) 
+		printf("\nNoro 3 %lf\n", Scheduler::instance().clock());
   sendOutPacketWithRoute(p, false);
 }
 
@@ -2083,7 +2142,7 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
 		} 
 	}
 	if(timeout == 500.0) {
-		timeout = 2.0 + Scheduler::instance().clock();
+		timeout = 0.0 + Scheduler::instance().clock();
 	}
 	//printf("El %d %lf\n",node_ -> nodeid(), timeout);
 	/*double currTime = Scheduler::instance().clock();
@@ -2112,9 +2171,9 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   hdr_sr *new_srh =  hdr_sr::access(p_copy.pkt);
   new_srh->init();
 	new_srh -> route_rep_path_timeout() = timeout < old_srh -> route_req_path_timeout() ? timeout : old_srh -> route_req_path_timeout();
-	if(new_srh -> route_rep_path_timeout() - 1 < Scheduler::instance().clock()) {
+	/*if(new_srh -> route_rep_path_timeout() - 0.05 < Scheduler::instance().clock()) {
 		return;
-	}
+	}*/
   for (int i = 0 ; i < p_copy.route.length() ; i++)
     p_copy.route[i].fillSRAddr(new_srh->reply_addrs()[i]);
   new_srh->route_reply_len() = p_copy.route.length();
@@ -2136,10 +2195,18 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   // flip the route around for the return to the requestor, and 
   // cache the route for future use
   p_copy.route.reverseInPlace();
-	if(new_srh -> route_rep_path_timeout() == 0 || new_srh -> route_rep_path_timeout() == 500.0) {
-		printf("return Src to route requestor error");
-	}	
+	//if(new_srh -> route_rep_path_timeout() == 0 || new_srh -> route_rep_path_timeout() == 500.0) {
+		printf("return Src to route requestor error %lf ", old_srh -> route_req_path_timeout());
+	//}	
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id, new_srh -> route_rep_path_timeout());
+	printf("Dattebayo %d ", node_ -> nodeid());
+	if(node_ -> nodeid() == 60) {
+		int i;
+		for(i = 0; i < p_copy.route.length(); i++) {
+			printf("%u ", p_copy.route[i].addr);
+		}
+		printf("%lf\n", new_srh -> route_rep_path_timeout());
+	}
 
   p_copy.route.resetIterator();
   p_copy.route.fillSR(new_srh);
@@ -2224,6 +2291,14 @@ DSRAgent::acceptRouteReply(SRPacket &p)
 		printf("accept route reply error");	
 	}
   route_cache->addRoute(reply_route, Scheduler::instance().clock(), p.src, srh -> route_rep_path_timeout());
+	printf("Dattebayo %d ", node_ -> nodeid());
+	if(node_ -> nodeid() == 60) {
+		int i;
+		for(i = 0; i < reply_route.length(); i++) {
+			printf("%u ", reply_route[i].addr);
+		}
+		printf("%lf\n", srh -> route_rep_path_timeout());
+	}
 
   // back down the route request counters
   Entry *e = request_table.getEntry(reply_route[reply_route.length()-1]);
@@ -2262,6 +2337,8 @@ DSRAgent::acceptRouteReply(SRPacket &p)
 	     in to the link layer to give ARP time to complete.  If we
 	     dump all the packets in at once, all but the last one will
 	     be dropped.  XXX THIS IS A MASSIVE HACK -dam 4/14/98 */
+	if(node_ -> nodeid() == 60) 
+		printf("\nNoro 4 %lf\n", Scheduler::instance().clock());
 	  sendOutPacketWithRoute(send_buf[c].p, true, delay);
 	  delay += arp_timeout;	
 	  send_buf[c].p.pkt = NULL;
@@ -2740,6 +2817,16 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 		printf("router shortening error");
 	}	
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), p.src,  timeout);
+	printf("Dattebayo %d ", node_ -> nodeid());
+	if(node_ -> nodeid() == 60) {
+		int i;
+		for(i = 0; i < p_copy.route.length(); i++) {
+			printf("%u ", p_copy.route[i].addr);
+		}
+		printf("%lf\n", timeout);
+	}
+	if(node_ -> nodeid() == 60) 
+		printf("\nNoro 5 %lf\n", Scheduler::instance().clock());
   sendOutPacketWithRoute(p_copy, true);
 }
 
@@ -2925,6 +3012,8 @@ DSRAgent::undeliverablePkt(Packet *pkt, int mine)
 #ifdef NEW_SALVAGE_LOGIC
 	  srh->salvaged() += 1;
 #endif
+	//if(node_ -> nodeid() == 60) 
+	//	printf("\nNoro %lf\n", Scheduler::instance().clock());
 	  sendOutPacketWithRoute(p, false);
   }
 #ifdef NEW_SALVAGE_LOGIC
@@ -3125,7 +3214,7 @@ DSRAgent::xmitFailed(Packet *pkt, const char* reason)
      message to send to the orginator of the pkt (srh[0])
      p.pkt freed or handed off */
 {
-	printf("Route Error Occurred %lf on me %d ", Scheduler::instance().clock(), node_ -> nodeid());
+	printf("Route Error Occurred %lf on me %d due to %s ", Scheduler::instance().clock(), node_ -> nodeid(), reason);
 	int i;
   hdr_sr *srh = hdr_sr::access(pkt);
   SRPacket p1(pkt, srh);
@@ -3310,6 +3399,8 @@ DSRAgent::xmitFailed(Packet *pkt, const char* reason)
   p.src = net_id;
 
   /* send out the Route Error message */
+	if(node_ -> nodeid() == 60) 
+		printf("\nNoro 6 %lf\n", Scheduler::instance().clock());
   sendOutPacketWithRoute(p, true);
 }
 

@@ -296,7 +296,9 @@ public:
 		cur_addr_ = 0;
 
 		route_request() = 0;
+		route_req_path_timeout() = 500.0;
 		route_reply() = 0;
+		route_req_path_timeout() = 500.0;
 		route_reply_len() = 0;
 		route_error() = 0;
 		num_route_errors() = 0;

@@ -112,6 +112,7 @@ public:
   // rtns a pointer the path in the cache that we added
   void noticeDeadLink(const ID&from, const ID& to);
 	void checkCacheForTimeOut();
+	void printCache();
   // the link from->to isn't working anymore, purge routes containing
   // it from the cache
 
@@ -242,14 +243,15 @@ void Cache::checkCacheForTimeOut() {
 	for(i = 0; i < size; i++) {
 		//printf("NO NO %lf\n", timeOut[i] + timeLimit);	
 		if(timeOut[i] != 0 && timeOut[i] - timeLimit < currentTime) {
-			//printf("NO NO NO %lf %lf\n", currentTime, timeOut[i]);
+			printf("Kyun Ho gaya na %lf %lf ", currentTime, timeOut[i]);
 			if(cache[i].length() > 0) {
 				/*printf("clearing cache %lf\n", timeOut[i]);
 				int j;
 				for(j = 0; j < cache[i].length(); j++) {
 					printf("%u ", cache[i][j].addr);
 				} */
-				cache[i].reset();	
+				cache[i].reset();
+				timeOut[i] = 500.0;	
 			}
 		}
 	}
@@ -461,7 +463,11 @@ MobiCache::findRoute(ID dest, Path& route, int for_me, double& timeout)
       int prefix_len;
  
       primary_cache->addRoute(secondary_cache->cache[min_index], prefix_len, timeout);
-
+	int i;
+	printf("Hayaku ");
+	for(i = 0;i < secondary_cache -> cache[min_index].length(); i++) {
+		printf("%u ", secondary_cache -> cache[min_index][i]);
+	}
       // no need to run checkRoute over the Path* returned from
       // addRoute() because whatever was added was already in
       // the cache.
@@ -542,7 +548,17 @@ Cache::~Cache()
 {
   delete[] cache;
 }
-
+void Cache::printCache() {
+	int i, j;
+	printf("Fusion ");
+	for(i = 0; i < size; i++) {
+		for(j = 0; j < cache[i].length(); j++) {
+			printf(" %u ", cache[i][j].addr);
+		}
+		printf(" ");
+		printf("%lf               ", timeOut[i]);
+	}
+}
 bool 
 Cache::searchRoute(const ID& dest, int& i, Path &path, int &index, double& timeout)
   // look for dest in cache, starting at index, 
@@ -555,12 +571,19 @@ Cache::searchRoute(const ID& dest, int& i, Path &path, int &index, double& timeo
 	{
 	  i = n;
 	  path = cache[index];
+		printCache();
+		printf("Mota Doshi");
 		timeout = timeOut[index];
 	  return true;
 	}
   return false;
 }
-
+double min1(double a, double b) {
+	if(a < b) {
+		return a;
+	}
+	return b;
+}
 Path*
 Cache::addRoute(Path & path, int &common_prefix_len, double timeout)
 {
@@ -586,7 +609,10 @@ Cache::addRoute(Path & path, int &common_prefix_len, double timeout)
           common_prefix_len = n;
           for ( ; n < path.length() ; n++)
             cache[index].appendToPath(path[n]);
-		timeOut[index] = timeout;
+		if(timeOut[index] != 0.0)
+			timeOut[index] = min1(timeOut[index], timeout);
+		else
+			timeOut[index] = timeout;
 		//printf("I am storing timeout %lf\n", timeout);
 
 	  if (verbose_debug)
@@ -683,6 +709,7 @@ routecache->trace("Sdebug %.9f _%s_ freshening %s->%s to %d %.9f",
 	    }
 	}
     }
+	printCache();
   return &cache[index];
 }
 
@@ -709,9 +736,10 @@ Cache::noticeDeadLink(const ID&from, const ID& to)
               routecache->checkRoute(&cache[p], ACTION_CHECK_CACHE, 0);
               routecache->checkRoute_logall(&cache[p], ACTION_DEAD_LINK, n);
 #endif	      
-	      if (n == 0)
+	      if (n == 0) {
 		cache[p].reset();        // kill the whole path
-	      else {
+		timeOut[p] = 500.0;
+	      } else {
 		cache[p].setLength(n+1); // truncate the path here
                 cache[p][n].log_stat = LS_UNLOGGED;
               }
