@@ -863,7 +863,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 		}
 
 		if(calcDistance(myX, x, myY, y) > 100) {
-			timeOut = 2.00;
+			timeOut = 0.0;
 		} else {
 
 			double dt = presentTime - temp.t;
@@ -1590,7 +1590,7 @@ double timeout2;
 	}
 		
   route_cache->addRoute(p.route, Scheduler::instance().clock(), net_id, timeout2);
-	printf("Dattebayo %d ", node_ -> nodeid());
+	//printf("Dattebayo %d ", node_ -> nodeid());
 	if(node_ -> nodeid() == 60) {
 		int i;
 		for(i = 0; i < p.route.length(); i++) {
@@ -1843,7 +1843,7 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
 	if(node_ -> nodeid() == 60) {
 		printf("\nGomu %d %d %d %d %d %lf\n", srh -> route_request(), srh -> route_error(), srh -> route_reply(), srh -> direction_eval(), srh -> link_timeout(), Scheduler::instance().clock());
 	}
-	printf("Kyun Ho gaya na 2 %d ", node_ -> nodeid());
+	//printf("Kyun Ho gaya na 2 %d ", node_ -> nodeid());
     cmnh->xmit_failure_ = srh->num_addrs() ? XmitFailureCallback : 
 					     XmitFlowFailureCallback;
     cmnh->xmit_failure_data_ = (void *) this;
@@ -1865,7 +1865,7 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
       }
     else
       { // forward according to source route
-	printf("Kyun Ho gaya na 3 ");
+	//printf("Kyun Ho gaya na 3 ");
         cmnh->xmit_failure_ = XmitFailureCallback;
         cmnh->xmit_failure_data_ = (void *) this;
 
@@ -1895,7 +1895,7 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
    * sounds like the source quench problem. ych 5/5/01
    */
   if(ifq->prq_isfull(p.pkt)) {
-	printf("Kyun Ho gaya na 1 ");
+	//printf("Kyun Ho gaya na 1 ");
 	  xmitFailed(p.pkt, DROP_IFQ_QFULL);
 	  p.pkt = 0;
 	  return;
@@ -2199,7 +2199,7 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
 		printf("return Src to route requestor error %lf ", old_srh -> route_req_path_timeout());
 	//}	
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id, new_srh -> route_rep_path_timeout());
-	printf("Dattebayo %d ", node_ -> nodeid());
+	//printf("Dattebayo %d ", node_ -> nodeid());
 	if(node_ -> nodeid() == 60) {
 		int i;
 		for(i = 0; i < p_copy.route.length(); i++) {
@@ -2291,7 +2291,7 @@ DSRAgent::acceptRouteReply(SRPacket &p)
 		printf("accept route reply error");	
 	}
   route_cache->addRoute(reply_route, Scheduler::instance().clock(), p.src, srh -> route_rep_path_timeout());
-	printf("Dattebayo %d ", node_ -> nodeid());
+	//printf("Dattebayo %d ", node_ -> nodeid());
 	if(node_ -> nodeid() == 60) {
 		int i;
 		for(i = 0; i < reply_route.length(); i++) {
@@ -2758,6 +2758,11 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
   p_copy.dest = p.route[0];   // tell the originator of this long source route
   p_copy.src = net_id;
 
+  // reverse the route to get the packet back
+  p_copy.route[p_copy.route.index()] = net_id;
+  p_copy.route.reverseInPlace();
+  p_copy.route.removeSection(0,p_copy.route.index());
+
 	double timeout = 500.0;
 	
 	double currTime = Scheduler::instance().clock();
@@ -2765,7 +2770,7 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 	for(i = 0; i < MAX_NEIGHBOURS; i++) {
 		if(neighbourTimeOut[i].timeOut < currTime) {
 			neighbourTimeOut[i].id.t = -2;
-		} else if(neighbourTimeOut[i].id == p_copy.dest) {
+		} else if(neighbourTimeOut[i].id == p_copy.route[1]) {
 			timeout = neighbourTimeOut[i].timeOut;
 			break;
 		} 
@@ -2775,11 +2780,6 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 	} else if(old_sr -> route_reply()) {
 		timeout = old_sr -> route_rep_path_timeout();
 	}
-  // reverse the route to get the packet back
-  p_copy.route[p_copy.route.index()] = net_id;
-  p_copy.route.reverseInPlace();
-  p_copy.route.removeSection(0,p_copy.route.index());
-
   hdr_ip *new_iph =  hdr_ip::access(p_copy.pkt);
   //new_iph->daddr() = p_copy.dest.addr;
   new_iph->daddr() = Address::instance().create_ipaddr(p_copy.dest.getNSAddr_t(),RT_PORT);
@@ -2797,6 +2797,9 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
     p.route[i].fillSRAddr(new_srh->reply_addrs()[i]);
   new_srh->route_reply_len() = p.route.length();
   new_srh->route_reply() = 1;
+	if(timeout == 500.0) {
+		timeout = 1.5 + Scheduler::instance().clock();
+	}
 	new_srh -> route_rep_path_timeout() = timeout;
   // grat replies will have a 0 seq num (it's only for trace analysis anyway)
   new_srh->rtreq_seq() = 0;
@@ -2817,7 +2820,7 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 		printf("router shortening error");
 	}	
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), p.src,  timeout);
-	printf("Dattebayo %d ", node_ -> nodeid());
+	//printf("Dattebayo %d ", node_ -> nodeid());
 	if(node_ -> nodeid() == 60) {
 		int i;
 		for(i = 0; i < p_copy.route.length(); i++) {

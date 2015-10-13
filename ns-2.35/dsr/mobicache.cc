@@ -242,8 +242,8 @@ void Cache::checkCacheForTimeOut() {
 	}*/
 	for(i = 0; i < size; i++) {
 		//printf("NO NO %lf\n", timeOut[i] + timeLimit);	
-		if(timeOut[i] != 0 && timeOut[i] - timeLimit < currentTime) {
-			printf("Kyun Ho gaya na %lf %lf ", currentTime, timeOut[i]);
+		if(timeOut[i] != 0 && timeOut[i] + timeLimit < currentTime) {
+			//printf("Kyun Ho gaya na %lf %lf ", currentTime, timeOut[i]);
 			if(cache[i].length() > 0) {
 				/*printf("clearing cache %lf\n", timeOut[i]);
 				int j;
@@ -464,10 +464,10 @@ MobiCache::findRoute(ID dest, Path& route, int for_me, double& timeout)
  
       primary_cache->addRoute(secondary_cache->cache[min_index], prefix_len, timeout);
 	int i;
-	printf("Hayaku ");
+	/*printf("Hayaku ");
 	for(i = 0;i < secondary_cache -> cache[min_index].length(); i++) {
 		printf("%u ", secondary_cache -> cache[min_index][i]);
-	}
+	}*/
       // no need to run checkRoute over the Path* returned from
       // addRoute() because whatever was added was already in
       // the cache.
@@ -550,14 +550,19 @@ Cache::~Cache()
 }
 void Cache::printCache() {
 	int i, j;
-	printf("Fusion ");
-	for(i = 0; i < size; i++) {
-		for(j = 0; j < cache[i].length(); j++) {
-			printf(" %u ", cache[i][j].addr);
+	if(Scheduler::instance().clock() < 1.5) {
+		for(i = 0; i < size; i++) {
+			if(cache[i].length() != 0) {
+				printf("\nFustion at ");
+				for(j = 0; j < cache[i].length(); j++) {
+					printf(" %u ", cache[i][j].addr);
+				}
+				printf(" ");
+				printf("%lf               ", timeOut[i]);
+			}
 		}
-		printf(" ");
-		printf("%lf               ", timeOut[i]);
 	}
+	printf("\n");
 }
 bool 
 Cache::searchRoute(const ID& dest, int& i, Path &path, int &index, double& timeout)
@@ -572,7 +577,7 @@ Cache::searchRoute(const ID& dest, int& i, Path &path, int &index, double& timeo
 	  i = n;
 	  path = cache[index];
 		printCache();
-		printf("Mota Doshi");
+		//printf("Mota Doshi");
 		timeout = timeOut[index];
 	  return true;
 	}
