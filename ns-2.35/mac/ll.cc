@@ -180,7 +180,8 @@ void LL::sendDown(Packet* p)
 	mac_->hdr_src(mh, mac_->addr());
 	mac_->hdr_type(mh, ETHERTYPE_IP);
 	int tx = 0;
-	
+//	printf("Packet Reached LL: %d at ", p -> uid_);
+//	printf("%lf\n", Scheduler::instance().clock());	
 	switch(ch->addr_type()) {
 
 	case NS_AF_ILINK:

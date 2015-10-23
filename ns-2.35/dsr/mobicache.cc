@@ -79,7 +79,7 @@ extern "C" {
 
 static const int verbose = 0;
 static const int verbose_debug = 0;
-static const double timeLimit = 1.0;
+static const double timeLimit = 0.19;
 
 /*===============================================================
   function selectors
@@ -113,6 +113,7 @@ public:
   void noticeDeadLink(const ID&from, const ID& to);
 	void checkCacheForTimeOut();
 	void printCache();
+	void clearCache();
   // the link from->to isn't working anymore, purge routes containing
   // it from the cache
 
@@ -152,6 +153,7 @@ public:
   // already
   int command(int argc, const char*const* argv);
 	void checkCacheForTimeOut();
+	void clearCache();
 
 protected:
   Cache *primary_cache;   /* routes that we are using, or that we have reason
@@ -216,6 +218,9 @@ MobiCache::command(int argc, const char*const* argv)
     } else if(argc == 2 && strcasecmp(argv[1], "check-cache") == 0) {
 		checkCacheForTimeOut();
 		return TCL_OK;
+	} else if(argc == 2 && strcasecmp(argv[1], "clear-cache") == 0) {
+		clearCache();
+		return TCL_OK;
 	}
   return RouteCache::command(argc, argv);
 }
@@ -224,9 +229,21 @@ void MobiCache::checkCacheForTimeOut() {
 	primary_cache -> checkCacheForTimeOut();
 	secondary_cache -> checkCacheForTimeOut();
 }
-
+void MobiCache::clearCache() {
+	primary_cache -> clearCache();
+	secondary_cache -> clearCache();
+}
+void Cache::clearCache() {
+	int i;
+	for(i = 0; i < size; i++) {
+		cache[i].reset();
+		timeOut[i] = 500;
+	}
+	printCache();
+}
 void Cache::checkCacheForTimeOut() {
 	double currentTime = Scheduler::instance().clock();
+	printf("Congroo %lf\n", currentTime);
 	int i;
 	//if(currentTime < 28.5)
 	//	printf("Congroo %lf\n", currentTime);
@@ -242,14 +259,15 @@ void Cache::checkCacheForTimeOut() {
 	}*/
 	for(i = 0; i < size; i++) {
 		//printf("NO NO %lf\n", timeOut[i] + timeLimit);	
-		if(timeOut[i] != 0 && timeOut[i] + timeLimit < currentTime) {
+		if(timeOut[i] != 0 && timeOut[i] - timeLimit < currentTime) {
 			//printf("Kyun Ho gaya na %lf %lf ", currentTime, timeOut[i]);
 			if(cache[i].length() > 0) {
-				/*printf("clearing cache %lf\n", timeOut[i]);
+				printf("Congroo clearing cache %lf ", timeOut[i]);
 				int j;
 				for(j = 0; j < cache[i].length(); j++) {
 					printf("%u ", cache[i][j].addr);
-				} */
+				}
+				printf("\n");
 				cache[i].reset();
 				timeOut[i] = 500.0;	
 			}
@@ -550,10 +568,10 @@ Cache::~Cache()
 }
 void Cache::printCache() {
 	int i, j;
-	if(Scheduler::instance().clock() < 1.5) {
+	if(Scheduler::instance().clock() < 100.5) {
 		for(i = 0; i < size; i++) {
 			if(cache[i].length() != 0) {
-				printf("\nFustion at ");
+				printf("\nFustion at %lf ", Scheduler::instance().clock());
 				for(j = 0; j < cache[i].length(); j++) {
 					printf(" %u ", cache[i][j].addr);
 				}
@@ -593,6 +611,9 @@ Path*
 Cache::addRoute(Path & path, int &common_prefix_len, double timeout)
 {
 	checkCacheForTimeOut();
+	if(timeout - timeLimit < Scheduler::instance().clock()) {
+		return NULL;
+	}	
 	//printf("Adding route with timeout %lf\n", timeout);
 	/*int i;
 	for(i = 0; i < path.length(); i++) {
