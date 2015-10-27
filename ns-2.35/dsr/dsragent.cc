@@ -182,7 +182,7 @@ bool dsragent_require_bi_routes = true;
 // bidirectional links -dam 5/14/98]
 
 
-const double timeLimit = 0.19;
+const double timeLimit = 0.20;
 #if 0
 bool lsnode_holdoff_rt_reply = true;
 // if we have a cached route to reply to route_request with, should we
@@ -1338,6 +1338,11 @@ DSRAgent::handleForwarding(SRPacket &p)
 
   // if there's a source route, maybe we should snoop it too
 	double timeout = p.pkt -> timeout_;
+	printf("handle forwaring route noticed ");
+	for(int i = 0; i < p.route.length(); i++) {
+		printf("%u ", p.route[i].addr);
+	}
+	printf("\n");
   if (dsragent_snoop_source_routes)
     route_cache->noticeRouteUsed(p.route, Scheduler::instance().clock(), 
 				 net_id, timeout);
@@ -1626,11 +1631,13 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
   p.route.appendToPath(net_id);
   p.route.reverseInPlace();
 	timeout2 = min(timeout2, timeout3);
-	printf("reply from route cache");
-	if(timeout2 == 0 || timeout2 == 500.0) {
-		printf("reply from route cache error %lf ", timeout2);
+	printf("reply from route cache ");
+	printf("route added ");
+	for(i = 0; i < p.route.length(); i++) {
+		printf("%u ", p.route[i].addr);
 	}
-		
+	printf("\n");
+	
   route_cache->addRoute(p.route, Scheduler::instance().clock(), net_id, timeout2);
 	//printf("Dattebayo %d ", node_ -> nodeid());
 	//double tempTimeout = srh -> route_req_path_timeout();
@@ -2171,7 +2178,7 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
 		}
 	}
 	if(timeout == 500.0) {
-		timeout = 0.0 + Scheduler::instance().clock();
+		timeout = 0.00 + Scheduler::instance().clock();
 	}
 	//printf("El %d %lf\n",node_ -> nodeid(), timeout);
 	/*double currTime = Scheduler::instance().clock();
@@ -2226,6 +2233,11 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   // flip the route around for the return to the requestor, and 
   // cache the route for future use
   p_copy.route.reverseInPlace();
+	printf("returnSrcRouteToRequestor route added ");
+	for(int i = 0; i < p_copy.route.length(); i++) {
+		printf("%u ", p_copy.route[i].addr);
+	}
+	printf("\n");
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id, p_copy.pkt -> timeout_);
 	printf("route reply packet found ", node_ -> nodeid());
 	for(i = 0; i < p_copy.route.length(); i++) {
@@ -2311,6 +2323,11 @@ DSRAgent::acceptRouteReply(SRPacket &p)
 	  reply_route.dump());
 
   // add the new route into our cache
+	printf("Accept Route reply route added ");
+	for(i = 0; i < reply_route.length(); i++) {
+		printf("%u ", reply_route[i].addr);
+	}
+	printf("\n");
   route_cache->addRoute(reply_route, Scheduler::instance().clock(), p.src, p.pkt->timeout_);
 	//printf("Dattebayo %d ", node_ -> nodeid());
 
@@ -2650,6 +2667,11 @@ DSRAgent::tap(const Packet *packet)
       if(verbose)
 	trace("Sdebug _%s_ tap saw route reply %d  %s",
 	       net_id.dump(), cmh->uid(), reply_path.dump());
+	printf("tap reply route noticed ");
+	for(int i = 0; i < reply_path.length(); i++) {
+		printf("%u ", reply_path[i].addr);
+	}
+	printf("\n");
       route_cache->noticeRouteUsed(reply_path, Scheduler::instance().clock(), 
 				   p.src, timeout);
     }
@@ -2667,6 +2689,11 @@ DSRAgent::tap(const Packet *packet)
       if (verbose)
 	trace("Sdebug _%s_ tap saw route use %d %s", net_id.dump(), 
 	      cmh->uid(), p.route.dump());
+	printf("tap snoop route noticed ");
+	for(int i = 0; i < p.route.length(); i++) {
+		printf("%u ", p.route[i].addr);
+	}
+	printf("\n");
       route_cache->noticeRouteUsed(p.route, Scheduler::instance().clock(), 
 				   net_id, timeout);
     }
@@ -2826,10 +2853,11 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 	  p.route.dump());
 
   // cache the route for future use (we learned the route from p)
-	printf("route shorteing");
-	if(timeout == 0 || timeout == 500.0) {
-		printf("router shortening error");
-	}	
+	printf("route shorteing route added ");
+	for(int i = 0; i < p_copy.route.length(); i++) {
+		printf("%u ", p_copy.route[i].addr);
+	}
+	printf("\n");
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), p.src,  timeout);
 	//printf("Dattebayo %d ", node_ -> nodeid());
 	if(node_ -> nodeid() == 60) {

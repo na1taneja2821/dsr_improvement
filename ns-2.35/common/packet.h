@@ -821,7 +821,7 @@ inline Packet* Packet::copy() const
 	if (data_) 
 		p->data_ = data_->copy();
 	p->txinfo_.init(&txinfo_);
-	p -> timeout_ = this -> timeout_; 
+	p -> timeout_ = timeout_; 
 	return (p);
 }
 

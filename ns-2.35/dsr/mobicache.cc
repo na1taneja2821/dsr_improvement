@@ -79,7 +79,7 @@ extern "C" {
 
 static const int verbose = 0;
 static const int verbose_debug = 0;
-static const double timeLimit = 0.19;
+static const double timeLimit = 0.20;
 
 /*===============================================================
   function selectors
@@ -636,7 +636,7 @@ Cache::addRoute(Path & path, int &common_prefix_len, double timeout)
           for ( ; n < path.length() ; n++)
             cache[index].appendToPath(path[n]);
 		if(timeOut[index] != 0.0)
-			timeOut[index] = min1(timeOut[index], timeout);
+			timeOut[index] = timeout;
 		else
 			timeOut[index] = timeout;
 		//printf("I am storing timeout %lf\n", timeout);

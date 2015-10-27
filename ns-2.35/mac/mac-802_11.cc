@@ -617,7 +617,7 @@ Mac802_11::tx_resume()
 		if (mhBackoff_.busy() == 0) {
 			
 			printf("%d ", -pktTx_->uid_);
-			printf("Packet Going Out: %lf ", pktTx_->timeout_);
+			printf("Packet Going Out: %lf %lf", pktTx_->timeout_, pktTx_ -> copy() -> timeout_);
 			printf("%lf ", Scheduler::instance().clock());
 			if(pktTx_ -> timeout_ < Scheduler::instance().clock()) {
 				printf("MAC Discrepancy\n");
