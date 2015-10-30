@@ -154,7 +154,7 @@ public:
   int command(int argc, const char*const* argv);
 	void checkCacheForTimeOut();
 	void clearCache();
-
+	void printCache();
 protected:
   Cache *primary_cache;   /* routes that we are using, or that we have reason
 			     to believe we really want to hold on to */
@@ -221,6 +221,9 @@ MobiCache::command(int argc, const char*const* argv)
 	} else if(argc == 2 && strcasecmp(argv[1], "clear-cache") == 0) {
 		clearCache();
 		return TCL_OK;
+	} else if(argc == 2 && strcasecmp(argv[1], "print-cache") == 0){
+		printCache();
+		return TCL_OK;
 	}
   return RouteCache::command(argc, argv);
 }
@@ -232,6 +235,10 @@ void MobiCache::checkCacheForTimeOut() {
 void MobiCache::clearCache() {
 	primary_cache -> clearCache();
 	secondary_cache -> clearCache();
+}
+void MobiCache::printCache() {
+	primary_cache -> printCache();
+	secondary_cache -> printCache();
 }
 void Cache::clearCache() {
 	int i;
@@ -671,6 +678,12 @@ Cache::addRoute(Path & path, int &common_prefix_len, double timeout)
 		      Scheduler::instance().clock(), routecache->net_id.dump(),
 		      path.dump());	
   }
+		int i;
+		printf("Aschente ");
+		for(i = 0; i < cache[victim].length(); i++) {
+			printf("%u ", cache[victim][i]);
+		}
+		printf("%lf\n", Scheduler::instance().clock());
   cache[victim].reset();
   CopyIntoPath(cache[victim], path, 0, path.length() - 1);
 	
@@ -763,6 +776,12 @@ Cache::noticeDeadLink(const ID&from, const ID& to)
               routecache->checkRoute_logall(&cache[p], ACTION_DEAD_LINK, n);
 #endif	      
 	      if (n == 0) {
+		int i;
+		printf("Aschente ");
+		for(i = 0; i < cache[p].length(); i++) {
+			printf("%u ", cache[p][i]);
+		}
+		printf("%lf\n", Scheduler::instance().clock());
 		cache[p].reset();        // kill the whole path
 		timeOut[p] = 500.0;
 	      } else {

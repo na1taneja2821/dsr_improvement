@@ -496,6 +496,9 @@ DSRAgent::command(int argc, const char*const* argv)
 	{
 	  return route_cache->command(argc, argv);
 	}
+	if(strcasecmp(argv[1], "print-cache") == 0) {
+	  return route_cache->command(argc, argv);
+	}
       if (strcasecmp(argv[1], "startdsr") == 0)
 	{
 	  if (ID(1,::IP) == net_id) 
@@ -920,12 +923,12 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 			//printf("Hello %lf", vNode);
 			if(vNode > 0) 
 				x = temp.distance * temp.velocity / vNode;
-			//else
-				//printf("vNode negative\n");
-			//printf("Printing x %lf\n", x);
 			if(!temp.increases) {
 				x = -x;
 			}
+			//else
+				//printf("vNode negative\n");
+			//printf("Printing x %lf\n", x);
 			if(temp.distance * temp.distance - x * x > 0)
 				h = sqrt(temp.distance * temp.distance - x * x);
 			//else 
@@ -937,11 +940,18 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 			if(h < radius)	
 				timeOut = sqrt(radius * radius - h * h);
 			//printf("timeOut negative h = %lf, x = %lf, vNode = %lf, t.dist = %lf\n", h, x, vNode, temp.distance);
-			timeOut -= x;
+			if(!temp.increases) {
+				timeOut += x;
+			} else {
+				timeOut -= x;
+			}
 			if(vNode != 0.0)
 				timeOut = timeOut / (vNode);
 			else 
 				timeOut = 500.0;
+			printf("Calculated %d ", net_id);
+			printf("%u ", id.addr);
+			printf("%lf %lf %lf\n", timeOut, x, Scheduler::instance().clock());
 			NeighbourLoc temp2;
 			temp2.id.t = -2;
 			for(i = 0; i < MAX_NEIGHBOURS; i++) {
@@ -1026,6 +1036,7 @@ void DSRAgent::updateNeighbourTimeOut(ID id, Time timeout) {
 			if(neighbourTimeOut[i].id.t == -2) {
 				//printf("Yo");
 				neighbourTimeOut[i].id = id;
+				neighbourTimeOut[i].id.t = -1;
 				neighbourTimeOut[i].timeOut = timeout + Scheduler::instance().clock();
 				//printf("%lf\n", neighbourTimeOut[i].timeOut);
 				break;
@@ -1044,12 +1055,16 @@ void DSRAgent::handleTimeoutPacket(SRPacket& p) {
 	hdr_sr *srh = hdr_sr::access(p.pkt);
 	//updateNeighbourTimeOut(p.src, srh -> link_timeout_time());
 	if(currentReqTime + 0.2 >= Scheduler::instance().clock()) {
+		/*if(node_ -> nodeid() == 9) {
+			printf("Aschente %lf", srh -> link_timeout_time());
+			printf(" %u\n", p.src.addr);
+		}*/
 		flag = true;
-		timeout = (timeout != 0.0 ? timeout : 500.0) < srh -> link_timeout_time() ? timeout : srh -> link_timeout_time();
+		//timeout = (timeout != 0.0 ? timeout : 500.0) < srh -> link_timeout_time() ? timeout : srh -> link_timeout_time();
 		if(timeout >= 500.0) {
 			printf("Omna %lf\n", srh -> link_timeout_time());
 		}
-		updateNeighbourTimeOut(p.src, timeout);
+		updateNeighbourTimeOut(p.src, srh -> link_timeout_time());
 		updateTimeout();
 		
 		flag = false;
@@ -1149,7 +1164,12 @@ DSRAgent::handlePacketReceipt(SRPacket& p)
     iph->daddr() = ((iph->dport() & mask) << shift) | ((~(mask) << shift) & iph->dst());
   }
 #endif
-  
+ 	printf("Packet Received at %d ", node_ -> nodeid());
+	int i;
+	for(i = 0; i < p.route.length(); i++) {
+		printf("%u ", p.route[i].addr);
+	}
+	printf("\n"); 
   cmh->size() -= srh->size();	// cut off the SR header 4/7/99 -dam
   srh->valid() = 0;
   cmh->size() -= IP_HDR_LEN;    // cut off IP header size 4/7/99 -dam
@@ -1681,10 +1701,6 @@ DSRAgent::replyFromRouteCache(SRPacket &p)
 
 void DSRAgent::sendOutDirectionPacket(int status) {
 	printf("Yo %d %d %lf %lf %d %d\n", node_ -> nodeid(), status, nextCalcTime, Scheduler::instance().clock(), flag1, flag2);
-	if(flag || Scheduler::instance().clock() < nextCalcTime) {
-		return;
-	}
-	printf("Inside %lf %lf\n", Scheduler::instance().clock(), nextCalcTime);
 	if(!flag1 && status != 1) {
 		return;
 	} else if(flag1 && !flag2 && status != 2) {
@@ -1694,6 +1710,10 @@ void DSRAgent::sendOutDirectionPacket(int status) {
 	} else if(flag1 && flag2 && flag3) {
 		return;
 	}
+	if(flag || Scheduler::instance().clock() < nextCalcTime) {
+		return;
+	}
+	printf("Inside %lf %lf\n", Scheduler::instance().clock(), nextCalcTime);
 	if(status == 1) {
 		flag1 = 1;
 	}
@@ -2237,7 +2257,7 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
 	for(int i = 0; i < p_copy.route.length(); i++) {
 		printf("%u ", p_copy.route[i].addr);
 	}
-	printf("\n");
+	printf(" %lf\n", p_copy.pkt -> timeout_);
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id, p_copy.pkt -> timeout_);
 	printf("route reply packet found ", node_ -> nodeid());
 	for(i = 0; i < p_copy.route.length(); i++) {

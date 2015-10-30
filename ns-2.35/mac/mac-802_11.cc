@@ -616,7 +616,7 @@ Mac802_11::tx_resume()
 	} else if(pktTx_) {
 		if (mhBackoff_.busy() == 0) {
 			
-			printf("%d ", -pktTx_->uid_);
+			/*printf("%d ", -pktTx_->uid_);
 			printf("Packet Going Out: %lf %lf", pktTx_->timeout_, pktTx_ -> copy() -> timeout_);
 			printf("%lf ", Scheduler::instance().clock());
 			if(pktTx_ -> timeout_ < Scheduler::instance().clock()) {
@@ -625,7 +625,7 @@ Mac802_11::tx_resume()
 				pktTx_ = 0;
 				setTxState(MAC_IDLE);
 				return;	
-			}
+			}*/
 			hdr_cmn *ch = HDR_CMN(pktTx_);
 			struct hdr_mac802_11 *mh = HDR_MAC802_11(pktTx_);
 			
@@ -1079,12 +1079,12 @@ Mac802_11::sendRTS(int dst)
 	struct rts_frame *rf = (struct rts_frame*)p->access(hdr_mac::offset_);
 	
 	assert(pktTx_);
-	if(pktTx_ -> timeout_ < Scheduler::instance().clock()) {
+	/*if(pktTx_ -> timeout_ < Scheduler::instance().clock()) {
 		Packet::free(pktTx_);
 		pktTx_ = 0;
 		//setTxState(MAC_IDLE);
 		return;
-	}
+	}*/
 	assert(pktRTS_ == 0);
 
 	/*
