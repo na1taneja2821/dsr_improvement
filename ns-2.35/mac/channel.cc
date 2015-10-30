@@ -353,12 +353,7 @@ WirelessChannel::sendUp(Packet* p, Phy *tifp)
 		  newp = p->copy();
 		  rnode = outlist[i];
 		  propdelay = get_pdelay(tnode, rnode);
-			if(Scheduler::instance().clock() + propdelay > p -> timeout_) {
-				Packet::free(p);
-				Packet::free(newp);
-				delete [] outlist;
-				return;
-			}
+
 		  rifp = (rnode->ifhead()).lh_first; 
 		  for(; rifp; rifp = rifp->nextnode()){
 			  if (rifp->channel() == this){
@@ -390,12 +385,6 @@ WirelessChannel::sendUp(Packet* p, Phy *tifp)
 			 
 			 propdelay = get_pdelay(tnode, rnode);
 			 
-				if(Scheduler::instance().clock() + propdelay > p -> timeout_) {
-					Packet::free(p);
-					Packet::free(newp);
-					delete [] affectedNodes;
-					return;
-				}
 			 rifp = (rnode->ifhead()).lh_first;
 			 for(; rifp; rifp = rifp->nextnode()){
 				 s.schedule(rifp, newp, propdelay);
