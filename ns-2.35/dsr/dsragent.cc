@@ -1801,6 +1801,30 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
       return;
     }
 
+	int i;
+	ID nextId;
+	nextId.t = -2;
+	for(i = 0; i < p.route.length() - 1; i++) {
+		if(p.route[i] == net_id) {
+			nextId = p.route[i + 1];
+			break;
+		}
+	}
+	if(nextId.t != -2) {
+		double timeout = 500.0;
+		for(i = 0; i < MAX_NEIGHBOURS; i++) {
+			if(neighbourTimeOut[i].id.t != -2) {
+				if(neighbourTimeOut[i].timeOut < Scheduler::instance().clock()) {
+					neighbourTimeOut[i].id.t = -2;
+				}
+				if(neighbourTimeOut[i].id == nextId) {
+					timeout = neighbourTimeOut[i].timeOut;
+					break;
+				}
+			}
+		}
+		p.pkt -> timeout_ = min(p.pkt->timeout_, timeout);
+	}		
   if (fresh)
     {
       p.route.resetIterator();
