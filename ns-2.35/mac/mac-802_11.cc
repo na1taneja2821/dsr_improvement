@@ -117,7 +117,6 @@ Mac802_11::transmit(Packet *p, double timeout)
 	 *       Interface can distinguish between incoming and
 	 *       outgoing packets.
 	 */
-	
 	downtarget_->recv(p->copy(), this);	
 	mhSend_.start(timeout);
 	mhIF_.start(txtime(p));
@@ -560,7 +559,6 @@ Mac802_11::capture(Packet *p)
 void
 Mac802_11::collision(Packet *p)
 {
-	printf("Collision Occurred at %lf\n", Scheduler::instance().clock());
 	switch(rx_state_) {
 	case MAC_RECV:
 		setRxState(MAC_COLL);
@@ -615,17 +613,6 @@ Mac802_11::tx_resume()
 		}
 	} else if(pktTx_) {
 		if (mhBackoff_.busy() == 0) {
-			
-			printf("%d ", -pktTx_->uid_);
-			printf("Packet Going Out: %lf ", pktTx_->timeout_);
-			printf("%lf ", Scheduler::instance().clock());
-			if(pktTx_ -> timeout_ < Scheduler::instance().clock()) {
-				printf("MAC Discrepancy\n");
-				Packet::free(pktTx_);
-				pktTx_ = 0;
-				setTxState(MAC_IDLE);
-				return;	
-			}
 			hdr_cmn *ch = HDR_CMN(pktTx_);
 			struct hdr_mac802_11 *mh = HDR_MAC802_11(pktTx_);
 			
@@ -1079,12 +1066,6 @@ Mac802_11::sendRTS(int dst)
 	struct rts_frame *rf = (struct rts_frame*)p->access(hdr_mac::offset_);
 	
 	assert(pktTx_);
-	if(pktTx_ -> timeout_ < Scheduler::instance().clock()) {
-		Packet::free(pktTx_);
-		pktTx_ = 0;
-		//setTxState(MAC_IDLE);
-		return;
-	}
 	assert(pktRTS_ == 0);
 
 	/*
@@ -1537,9 +1518,6 @@ Mac802_11::send(Packet *p, Handler *h)
 	}
 	
 	callback_ = h;
-	printf("%d ", -p->uid_);
-	printf("Packet Reached MAC: %lf ", p->timeout_);
-	printf("at %lf \n", Scheduler::instance().clock());
 	sendDATA(p);
 	sendRTS(ETHER_ADDR(dh->dh_ra));
 
@@ -1605,6 +1583,7 @@ Mac802_11::recv(Packet *p, Handler *h)
 	 *  interface.
 	 *
 	 */
+
 	/*
 	 *  If the interface is currently in transmit mode, then
 	 *  it probably won't even see this packet.  However, the

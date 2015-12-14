@@ -553,9 +553,6 @@ public:
 	 * 
          */
         u_int8_t        incoming;
-	// using a timeout value which checks whether the MAC needs to send this
-	// packet now or not
-	double timeout_;
 
 	//monarch extns end;
 };
@@ -717,7 +714,6 @@ inline Packet* Packet::alloc()
 	(HDR_CMN(p))->direction() = hdr_cmn::DOWN;
 	/* setting all direction of pkts to be downward as default; 
 	   until channel changes it to +1 (upward) */
-	p->timeout_ = 500.0;
 	p->next_ = 0;
 	return (p);
 }
@@ -821,7 +817,7 @@ inline Packet* Packet::copy() const
 	if (data_) 
 		p->data_ = data_->copy();
 	p->txinfo_.init(&txinfo_);
-	p -> timeout_ = this -> timeout_; 
+ 
 	return (p);
 }
 

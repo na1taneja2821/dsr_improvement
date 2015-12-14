@@ -152,11 +152,6 @@ void Channel::recv(Packet* p, Handler* h)
 void
 Channel::sendUp(Packet* p, Phy *tifp)
 {
-	if(p->timeout_ < Scheduler::instance().clock()) {
-		printf("MAC Discrepancy");
-		Packet::free(p);
-		return;
-	}
 	Scheduler &s = Scheduler::instance();
 	Phy *rifp = ifhead_.lh_first;
 	Node *tnode = tifp->node();

@@ -181,8 +181,6 @@ bool dsragent_require_bi_routes = true;
 // [XXX this flag doesn't control all the behaviors and code that assume
 // bidirectional links -dam 5/14/98]
 
-
-const double timeLimit = 0.19;
 #if 0
 bool lsnode_holdoff_rt_reply = true;
 // if we have a cached route to reply to route_request with, should we
@@ -479,11 +477,6 @@ DSRAgent::command(int argc, const char*const* argv)
 	{
 	  return route_cache->command(argc, argv);
 	}
-	
-      if (strcasecmp(argv[1], "clear-cache") == 0)
-	{
-	  return route_cache->command(argc, argv);
-	}
       if (strcasecmp(argv[1], "startdsr") == 0)
 	{
 	  if (ID(1,::IP) == net_id) 
@@ -749,7 +742,6 @@ DSRAgent::handlePktWithoutSR(SRPacket& p, bool retry)
 	      p.src.dump(), p.dest.dump(), p.route.dump());      
 	if(node_ -> nodeid() == 60) 
 		printf("\nNoro 7 %lf\n", Scheduler::instance().clock());
-	p.pkt->timeout_ = timeout - timeLimit;
       sendOutPacketWithRoute(p, true);
       return;
     } // end if we have a route
@@ -911,9 +903,9 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 			//else
 				//printf("vNode negative\n");
 			//printf("Printing x %lf\n", x);
-			if(!temp.increases) {
+			/*if(!temp.increases) {
 				x = -x;
-			}
+			}*/
 			if(temp.distance * temp.distance - x * x > 0)
 				h = sqrt(temp.distance * temp.distance - x * x);
 			//else 
@@ -924,7 +916,8 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 			timeOut = 500.0;
 			if(h < radius)	
 				timeOut = sqrt(radius * radius - h * h);
-			//printf("timeOut negative h = %lf, x = %lf, vNode = %lf, t.dist = %lf\n", h, x, vNode, temp.distance);
+			else 
+				//printf("timeOut negative h = %lf, x = %lf, vNode = %lf, t.dist = %lf\n", h, x, vNode, temp.distance);
 			timeOut -= x;
 			if(vNode != 0.0)
 				timeOut = timeOut / (vNode);
@@ -965,7 +958,6 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 		Scheduler::instance().schedule(ll, p.pkt, 0.0);
 		p.pkt = NULL;
 		updateNeighbourTimeOut(id, timeOut);
-		updateTimeout();
 		printf("Timeout between nodes %d and %d is %lf sent at time %lf\n", node_ -> nodeid(), id.addr, timeOut, Scheduler::instance().clock());
 		
 	}
@@ -1021,16 +1013,16 @@ void DSRAgent::updateNeighbourTimeOut(ID id, Time timeout) {
 		}
 	
 	}
-	printf("Psy Printing present state for nodeid %d. Also my nextCalcTime is: %lf at %lf\n", node_ -> nodeid(), nextCalcTime, Scheduler::instance().clock());
-	for(i = 0; i < MAX_NEIGHBOURS; i++) {
+	//printf("Psy Printing present state for nodeid %d\n", node_ -> nodeid());
+	/*for(i = 0; i < MAX_NEIGHBOURS; i++) {
 		if(neighbourTimeOut[i].id.t != -2) {
 			printf("Psy %u %lf\n", neighbourTimeOut[i].id.addr, neighbourTimeOut[i].timeOut);
 		}
-	}
+	}*/
 }
 void DSRAgent::handleTimeoutPacket(SRPacket& p) {
 	hdr_sr *srh = hdr_sr::access(p.pkt);
-	//updateNeighbourTimeOut(p.src, srh -> link_timeout_time());
+	updateNeighbourTimeOut(p.src, srh -> link_timeout_time());
 	if(currentReqTime + 0.2 >= Scheduler::instance().clock()) {
 		flag = true;
 		timeout = (timeout != 0.0 ? timeout : 500.0) < srh -> link_timeout_time() ? timeout : srh -> link_timeout_time();
@@ -1038,31 +1030,13 @@ void DSRAgent::handleTimeoutPacket(SRPacket& p) {
 			printf("Omna %lf\n", srh -> link_timeout_time());
 		}
 		updateNeighbourTimeOut(p.src, timeout);
-		updateTimeout();
-		
-		flag = false;
-		flag1 = flag2 = flag3 = false;
 	} else {
 		printf("It reached me late!!!\n");
 	}
 }
-
 void DSRAgent::updateTimeout() {
-	//if(!flag) 
-	//	return;
-	int i;
-	if(nextCalcTime > Scheduler::instance().clock() + 5.0) {
-		nextCalcTime = Scheduler::instance().clock() + 5.0;
-	}
-	if(nextCalcTime <= Scheduler::instance().clock()) {
-		nextCalcTime = Scheduler::instance().clock() + 5.0;
-	}
-	for(i = 0; i < MAX_NEIGHBOURS; i++) {
-		if(neighbourTimeOut[i].id.t != -2 && neighbourTimeOut[i].timeOut > Scheduler::instance().clock())
-			nextCalcTime = nextCalcTime < (neighbourTimeOut[i].timeOut - timeLimit) ? nextCalcTime : neighbourTimeOut[i].timeOut - timeLimit;
-	}
-	/*
-	old nextCalcPeriod calculation logic
+	if(!flag) 
+		return;
 	//printf("timeout %lf\n", timeout);
 	//if(nextCalcPeriod == 0)
 		nextCalcPeriod = (nextCalcPeriod + timeout) / 2;
@@ -1074,7 +1048,9 @@ void DSRAgent::updateTimeout() {
 	}
 	nextCalcTime = nextCalcPeriod + currentReqTime;
 	timeout += currentReqTime;
-	//printf("timeout = %lf\nnextCalcTime = %lf\n", timeout, nextCalcTime);*/
+	//printf("timeout = %lf\nnextCalcTime = %lf\n", timeout, nextCalcTime);
+	flag = false;
+	flag1 = flag2 = flag3 = false;
 }
 void
 DSRAgent::handlePacketReceipt(SRPacket& p)
@@ -1339,8 +1315,7 @@ DSRAgent::handleForwarding(SRPacket &p)
 		for(i = 0; i < MAX_NEIGHBOURS; i++) {
 			if(neighbourTimeOut[i].timeOut < currTime) {
 				neighbourTimeOut[i].id.t = -2;
-			}
-			if(neighbourTimeOut[i].id == senderId) {
+			} else if(neighbourTimeOut[i].id == senderId) {
 				timeout = neighbourTimeOut[i].timeOut;
 				break;
 			} 
@@ -1737,19 +1712,6 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
   assert(srh->valid());
   assert(cmnh->size() > 0);
 
-	if(!(srh -> route_request() || srh -> route_reply() || srh -> route_error() || srh -> direction_eval() || srh -> link_timeout())) {
-		printf("Unknown Packet Found ");
-		int i;
-		for(i = 0; i < p.route.length(); i++) {
-			printf("%u ", p.route[i].addr);
-		}
-		printf("at %lf\n", Scheduler::instance().clock());
-	}
-	if(srh -> route_request()) {
-		printf("route request packet found %u %u at %lf\n", p.src.addr, p.dest.addr, Scheduler::instance().clock());
-	}
-		
-		
   ID dest;
   if (diff_subnet(p.dest,net_id)) {
   dest = ID(node_->base_stn(),::IP);
@@ -1933,7 +1895,7 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
    * sounds like the source quench problem. ych 5/5/01
    */
   if(ifq->prq_isfull(p.pkt)) {
-	  printf("Kyun Ho gaya na 1 at %lf\n", Scheduler::instance().clock());
+	//printf("Kyun Ho gaya na 1 ");
 	  xmitFailed(p.pkt, DROP_IFQ_QFULL);
 	  p.pkt = 0;
 	  return;
@@ -1957,8 +1919,7 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
 		for(i = 0; i < MAX_NEIGHBOURS; i++) {
 			if(neighbourTimeOut[i].timeOut < currTime) {
 				neighbourTimeOut[i].id.t = -2;
-			}
-			if(neighbourTimeOut[i].id == senderId) {
+			} else if(neighbourTimeOut[i].id == senderId) {
 				timeout = neighbourTimeOut[i].timeOut;
 				break;
 			} 
@@ -2175,8 +2136,7 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
 	for(i = 0; i < MAX_NEIGHBOURS; i++) {
 		if(neighbourTimeOut[i].timeOut < currTime) {
 			neighbourTimeOut[i].id.t = -2;
-		}
-		if(neighbourTimeOut[i].id == senderId) {
+		} else if(neighbourTimeOut[i].id == senderId) {
 			timeout = neighbourTimeOut[i].timeOut;
 			break;
 		} 
@@ -2211,10 +2171,9 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   hdr_sr *new_srh =  hdr_sr::access(p_copy.pkt);
   new_srh->init();
 	new_srh -> route_rep_path_timeout() = timeout < old_srh -> route_req_path_timeout() ? timeout : old_srh -> route_req_path_timeout();
-	if(new_srh -> route_rep_path_timeout() - timeLimit < Scheduler::instance().clock()) {
-		Packet::free(p_copy.pkt);	
+	/*if(new_srh -> route_rep_path_timeout() - 0.05 < Scheduler::instance().clock()) {
 		return;
-	}
+	}*/
   for (int i = 0 ; i < p_copy.route.length() ; i++)
     p_copy.route[i].fillSRAddr(new_srh->reply_addrs()[i]);
   new_srh->route_reply_len() = p_copy.route.length();
@@ -2237,14 +2196,17 @@ DSRAgent::returnSrcRouteToRequestor(SRPacket &p)
   // cache the route for future use
   p_copy.route.reverseInPlace();
 	//if(new_srh -> route_rep_path_timeout() == 0 || new_srh -> route_rep_path_timeout() == 500.0) {
-		printf("return Src to route requestor error %lf \n", old_srh -> route_req_path_timeout());
+		printf("return Src to route requestor error %lf ", old_srh -> route_req_path_timeout());
 	//}	
   route_cache->addRoute(p_copy.route, Scheduler::instance().clock(), net_id, new_srh -> route_rep_path_timeout());
-	printf("route reply packet found ", node_ -> nodeid());
-	for(i = 0; i < p_copy.route.length(); i++) {
-		printf("%u ", p_copy.route[i].addr);
+	//printf("Dattebayo %d ", node_ -> nodeid());
+	if(node_ -> nodeid() == 60) {
+		int i;
+		for(i = 0; i < p_copy.route.length(); i++) {
+			printf("%u ", p_copy.route[i].addr);
+		}
+		printf("%lf\n", new_srh -> route_rep_path_timeout());
 	}
-	printf("at %lf\n", Scheduler::instance().clock());
 
   p_copy.route.resetIterator();
   p_copy.route.fillSR(new_srh);
@@ -2375,7 +2337,6 @@ DSRAgent::acceptRouteReply(SRPacket &p)
 	     in to the link layer to give ARP time to complete.  If we
 	     dump all the packets in at once, all but the last one will
 	     be dropped.  XXX THIS IS A MASSIVE HACK -dam 4/14/98 */
-	send_buf[c].p.pkt -> timeout_ = timeout - timeLimit;
 	if(node_ -> nodeid() == 60) 
 		printf("\nNoro 4 %lf\n", Scheduler::instance().clock());
 	  sendOutPacketWithRoute(send_buf[c].p, true, delay);
@@ -2630,8 +2591,7 @@ DSRAgent::tap(const Packet *packet)
 	for(i = 0; i < MAX_NEIGHBOURS; i++) {
 		if(neighbourTimeOut[i].timeOut < currTime) {
 			neighbourTimeOut[i].id.t = -2;
-		} 
-		if(neighbourTimeOut[i].id == senderId) {
+		} else if(neighbourTimeOut[i].id == senderId) {
 			timeout = neighbourTimeOut[i].timeOut;
 			break;
 		} 
@@ -2810,16 +2770,15 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
 	for(i = 0; i < MAX_NEIGHBOURS; i++) {
 		if(neighbourTimeOut[i].timeOut < currTime) {
 			neighbourTimeOut[i].id.t = -2;
-		}
-		if(neighbourTimeOut[i].id == p_copy.route[1]) {
+		} else if(neighbourTimeOut[i].id == p_copy.route[1]) {
 			timeout = neighbourTimeOut[i].timeOut;
 			break;
 		} 
 	}
 	if(old_sr -> route_request()) {
-		timeout = timeout < old_sr -> route_req_path_timeout() ? timeout : old_sr -> route_req_path_timeout();
+		timeout = old_sr -> route_req_path_timeout();
 	} else if(old_sr -> route_reply()) {
-		timeout = timeout < old_sr -> route_rep_path_timeout() ? timeout : old_sr -> route_rep_path_timeout();
+		timeout = old_sr -> route_rep_path_timeout();
 	}
   hdr_ip *new_iph =  hdr_ip::access(p_copy.pkt);
   //new_iph->daddr() = p_copy.dest.addr;
@@ -2839,7 +2798,7 @@ DSRAgent::sendRouteShortening(SRPacket &p, int heard_at, int xmit_at)
   new_srh->route_reply_len() = p.route.length();
   new_srh->route_reply() = 1;
 	if(timeout == 500.0) {
-		timeout = 0.0 + Scheduler::instance().clock();
+		timeout = 1.5 + Scheduler::instance().clock();
 	}
 	new_srh -> route_rep_path_timeout() = timeout;
   // grat replies will have a 0 seq num (it's only for trace analysis anyway)

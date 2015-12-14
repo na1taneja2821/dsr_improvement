@@ -110,8 +110,7 @@ Scheduler::schedule(Handler* h, Event* e, double delay)
 	e->uid_ = uid_++;
 	e->handler_ = h;
 	double t = clock_ + delay;
-//	printf("Event Scheduled: %d at",e->uid_);
-//	printf(" %lf\n", clock_);
+
 	e->time_ = t;
 	insert(e);
 }
@@ -148,9 +147,6 @@ Scheduler::dispatch(Event* p, double t)
 
 	clock_ = t;
 	p->uid_ = -p->uid_;	// being dispatched
-//	printf("Event Dispatched: %d at ", -(p->uid_));
-//	printf(" %lf scheduled at %lf\n", clock_, p -> time_);
-
 	p->handler_->handle(p);	// dispatch
 }
 
