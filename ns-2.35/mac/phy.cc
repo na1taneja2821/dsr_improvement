@@ -119,6 +119,12 @@ Phy::recv(Packet* p, Handler*)
 		 * it distinguishing between incoming and outgoing
 		 * packets.
 		 */
+		
+		if(p->timeout_ < Scheduler::instance().clock()) {
+			printf("MAC Discrepancy");
+			Packet::free(p);
+			return;
+		}
 		sendDown(p);
 		return;
 	case hdr_cmn::UP :

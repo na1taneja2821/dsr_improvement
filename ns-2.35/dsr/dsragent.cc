@@ -885,7 +885,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 			return;
 		}
 
-		if(calcDistance(myX, x, myY, y) > 100) {
+		if(calcDistance(myX, x, myY, y) > 250) {
 			timeOut = 0.0;
 		} else {
 
@@ -935,7 +935,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 				//printf("h negative %lf %lf\n", temp.distance, x);
 			//printf("Printing Minimum distance %lf\n", h);
 			
-			double radius = 100;
+			double radius = 250;
 			timeOut = 500.0;
 			if(h < radius)	
 				timeOut = sqrt(radius * radius - h * h);
@@ -1757,7 +1757,7 @@ void DSRAgent::sendOutDirectionPacket(int status) {
 		currentReqTime = Scheduler::instance().clock();
 	}
 	printf("\nGone me: %d at: %lf with status: %d\n", node_ -> nodeid(), Scheduler::instance().clock(), status);
-    Scheduler::instance().schedule(ll, p.pkt, Random::uniform(RREQ_JITTER));
+    Scheduler::instance().schedule(ll, p.pkt, 0.0);
 
     p.pkt = NULL; 
 }
