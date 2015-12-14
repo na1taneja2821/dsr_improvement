@@ -203,6 +203,12 @@ WirelessPhy::command(int argc, const char*const* argv)
 void 
 WirelessPhy::sendDown(Packet *p)
 {
+
+	if(p->timeout_ < Scheduler::instance().clock()) {
+		printf("MAC Discrepancy");
+		Packet::free(p);
+		return;
+	}
 	/*
 	 * Sanity Check
 	 */
