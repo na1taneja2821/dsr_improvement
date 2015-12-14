@@ -870,7 +870,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 			return;
 		}
 
-		if(calcDistance(myX, x, myY, y) > 100) {
+		if(calcDistance(myX, x, myY, y) > 250) {
 			timeOut = 0.0;
 		} else {
 
@@ -920,7 +920,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 				//printf("h negative %lf %lf\n", temp.distance, x);
 			//printf("Printing Minimum distance %lf\n", h);
 			
-			double radius = 100;
+			double radius = 250;
 			timeOut = 500.0;
 			if(h < radius)	
 				timeOut = sqrt(radius * radius - h * h);
