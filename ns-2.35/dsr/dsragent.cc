@@ -1269,7 +1269,9 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
 
   assert(srh->valid());
   assert(cmnh->size() > 0);
-
+	if(srh -> route_request()) {
+		printf("route request found %u %u at %lf\n", p.src.addr, p.dest.addr, Scheduler::instance().clock());
+	}
   ID dest;
   if (diff_subnet(p.dest,net_id)) {
   dest = ID(node_->base_stn(),::IP);
