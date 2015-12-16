@@ -983,7 +983,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
   		srh->init();
 		srh -> link_timeout() = 1;
 		srh -> link_timeout_time() = timeOut;
-		printf("\nGone 2 me: %d at: %lf\n", node_ -> nodeid(), Scheduler::instance().clock());
+		printf("\nInside Gone 2 me: %d at: %lf\n", node_ -> nodeid(), Scheduler::instance().clock());
 		Scheduler::instance().schedule(ll, p.pkt, 0.0);
 		p.pkt = NULL;
 		updateNeighbourTimeOut(id, timeOut);
