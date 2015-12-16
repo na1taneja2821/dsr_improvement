@@ -103,11 +103,11 @@ Phy::command(int argc, const char*const* argv) {
 
 
 void
-Phy::recv(Packet* p, Handler*)
+Phy::recv(Packet* p, Handler* h)
 {
-	struct hdr_cmn *hdr = HDR_CMN(p);	
+	struct hdr_cmn *hdr = HDR_CMN(p);
+	Mac *hmac = (Mac *) h;
 	//struct hdr_sr *hsr = HDR_SR(p);
-	
 	/*
 	 * Handle outgoing packets
 	 */
@@ -121,7 +121,8 @@ Phy::recv(Packet* p, Handler*)
 		 */
 		
 		if(p->timeout_ < Scheduler::instance().clock()) {
-			printf("MAC Discrepancy");
+			printf("recv MAC Discrepancy %lf %lf\n", p -> timeout_, Scheduler::instance().clock());
+			hmac -> myFunction();
 			Packet::free(p);
 			return;
 		}

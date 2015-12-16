@@ -206,8 +206,13 @@ WirelessPhy::sendDown(Packet *p)
 	/*
 	 * Sanity Check
 	 */
-	assert(initialized());
-	
+	assert(initialized());	
+		
+	if(p->timeout_ < Scheduler::instance().clock()) {
+		printf("sendDown MAC Discrepancy %lf %lf\n", p -> timeout_, Scheduler::instance().clock());
+		Packet::free(p);
+		return;
+	}
 	if (em()) {
 			//node is off here...
 			if (Is_node_on() != true ) {

@@ -153,7 +153,7 @@ void
 Channel::sendUp(Packet* p, Phy *tifp)
 {
 	if(p->timeout_ < Scheduler::instance().clock()) {
-		printf("MAC Discrepancy");
+		printf("MAC Discrepancy %lf %lf\n", p -> timeout_, Scheduler::instance().clock());
 		Packet::free(p);
 		return;
 	}

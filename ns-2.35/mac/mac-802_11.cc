@@ -58,7 +58,7 @@
 #include "agent.h"
 #include "basetrace.h"
 
-
+int flag = 0;
 /* our backoff timer doesn't count down in idle times during a
  * frame-exchange sequence as the mac tx state isn't idle; genreally
  * these idle times are less than DIFS and won't contribute to
@@ -118,10 +118,19 @@ Mac802_11::transmit(Packet *p, double timeout)
 	 *       outgoing packets.
 	 */
 	
-	downtarget_->recv(p->copy(), this);	
+	downtarget_->recv(p->copy(), this);
+	if(flag) 
+		return;
 	mhSend_.start(timeout);
 	mhIF_.start(txtime(p));
 }
+
+void Mac802_11::myFunction() {
+	tx_active_ = 0;
+	setTxState(MAC_IDLE);
+	flag = 1;
+}
+
 inline void
 Mac802_11::setRxState(MacState newState)
 {
@@ -984,6 +993,11 @@ Mac802_11::check_pktCTRL()
 		exit(1);
 	}
 	transmit(pktCTRL_, timeout);
+	if(flag) {
+		Packet::free(pktCTRL_);
+		pktCTRL_ = 0;
+	}
+	flag = 0;
 	return 0;
 }
 
@@ -1019,7 +1033,11 @@ Mac802_11::check_pktRTS()
 	}
 	transmit(pktRTS_, timeout);
   
-
+	if(flag) {
+		Packet::free(pktRTS_);
+		pktRTS_ = 0;
+	}
+	flag = 0;
 	return 0;
 }
 
@@ -1065,6 +1083,12 @@ Mac802_11::check_pktTx()
 		exit(1);
 	}
 	transmit(pktTx_, timeout);
+	
+	if(flag) {
+		Packet::free(pktTx_);
+		pktTx_ = 0;
+	}
+	flag = 0;
 	return 0;
 }
 /*
@@ -1134,6 +1158,7 @@ Mac802_11::sendRTS(int dst)
 			       + phymib_.getSIFS()
 			       + txtime(phymib_.getACKlen(), basicRate_));
 	pktRTS_ = p;
+	pktRTS_ -> timeout_ = pktTx_ -> timeout_;
 }
 
 void
@@ -1301,6 +1326,7 @@ Mac802_11::RetransmitRTS()
 		   before discarding the packet */
 		hdr_cmn *ch = HDR_CMN(pktTx_);
 		if (ch->xmit_failure_) {
+			printf("Looking for error 1 ");
                         /*
                          *  Need to remove the MAC header so that 
                          *  re-cycled packets don't keep getting
@@ -1388,6 +1414,7 @@ Mac802_11::RetransmitDATA()
 		   before discarding the packet */
 		hdr_cmn *ch = HDR_CMN(pktTx_);
 		if (ch->xmit_failure_) {
+			printf("Looking for error 2 ");
                         ch->size() -= phymib_.getHdrLen11();
 			ch->xmit_reason_ = XMIT_REASON_ACK;
                         ch->xmit_failure_(pktTx_->copy(),
@@ -2294,6 +2321,11 @@ Mac802_11::check_pktBEACON()
 	}
 	transmit(pktBEACON_, timeout);
 
+	if(flag) {
+		Packet::free(pktBEACON_);
+		pktBEACON_ = 0;
+	}
+	flag = 0;
 	return 0;
 }
  
@@ -2455,7 +2487,11 @@ Mac802_11::check_pktASSOCREQ()
 	}
 	transmit(pktASSOCREQ_, timeout);
   
-
+	if(flag) {
+		Packet::free(pktASSOCREQ_);
+		pktASSOCREQ_ = 0;
+	}
+	flag = 0;
 	return 0;
 }
 
@@ -2568,6 +2604,11 @@ Mac802_11::check_pktASSOCREP()
 	}
  	transmit(pktASSOCREP_, timeout);
 		
+	if(flag) {
+		Packet::free(pktASSOCREP_);
+		pktASSOCREP_ = 0;
+	}
+	flag = 0;
  	return 0;
 }
 
@@ -2767,6 +2808,11 @@ Mac802_11::check_pktAUTHENTICATE()
 
 	transmit(pktAUTHENTICATE_, timeout);
 
+	if(flag) {
+		Packet::free(pktAUTHENTICATE_);
+		pktAUTHENTICATE_ = 0;
+	}
+	flag = 0;
 	return 0;
 }
 
@@ -2923,8 +2969,15 @@ Mac802_11::check_pktPROBEREQ()
 		exit(1);
 	}
 	transmit(pktPROBEREQ_, timeout);
+	
+	if(flag) {
+		Packet::free(pktPROBEREQ_);
+		pktPROBEREQ_ = 0;
+	} else {
 	mhProbe_.start(macmib_.getMinChannelTime());
 	OnMinChannelTime = 1;
+	}
+	flag = 0;
 	return 0;
 }
 
@@ -3043,7 +3096,11 @@ Mac802_11::check_pktPROBEREP()
 	}
 	transmit(pktPROBEREP_, timeout);
   
-
+	if(flag) {
+		Packet::free(pktPROBEREP_);
+		pktPROBEREP_ = 0;
+	}
+	flag = 0;
 	return 0;
 }
 

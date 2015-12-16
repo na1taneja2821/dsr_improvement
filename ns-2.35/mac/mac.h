@@ -177,7 +177,7 @@ public:
 	virtual void recv(Packet* p, Handler* h);
 	virtual void sendDown(Packet* p);
 	virtual void sendUp(Packet *p);
-
+	virtual void myFunction();
 	virtual void resume(Packet* p = 0);
 	virtual void installTap(Tap *t) { tap_ = t; }
 	

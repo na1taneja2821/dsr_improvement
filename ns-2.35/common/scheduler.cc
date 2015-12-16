@@ -91,7 +91,9 @@ Scheduler::schedule(Handler* h, Event* e, double delay)
 	};
 	
 	if (e->uid_ > 0) {
-		printf("Scheduler: Event UID not valid!\n\n");
+		//e -> uid_ = -(e -> uid_);
+		printf("Scheduler: Event UID not valid! %lf %d\n\n", e -> time_, e -> uid_);
+		//return;
 		abort();
 	}
 	

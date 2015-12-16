@@ -169,7 +169,9 @@ void Mac::sendDown(Packet* p)
 		s.schedule(&hRes_, &intr_, txt);
 }
 
+void Mac::myFunction() {
 
+}
 void Mac::resume(Packet* p)
 {
 	if (p != 0)

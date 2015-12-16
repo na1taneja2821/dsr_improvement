@@ -532,7 +532,8 @@ private:
 			mhNav_.start(t);
 		}
 	}
-
+	virtual void myFunction();
+	int		tx_active_;	// transmitter is ACTIVE
 protected:
 	PHY_MIB         phymib_;
         MAC_MIB         macmib_;
@@ -576,7 +577,6 @@ private:
 
 	MacState	rx_state_;	// incoming state (MAC_RECV or MAC_IDLE)
 	MacState	tx_state_;	// outgoint state
-	int		tx_active_;	// transmitter is ACTIVE
 
 	Packet          *eotPacket_;    // copy for eot callback
 
