@@ -2730,6 +2730,7 @@ DSRAgent::tap(const Packet *packet)
 
   if (dsragent_snoop_source_routes)
     {
+	timeout = min(timeout, packet -> timeout_);
       if (verbose)
 	trace("Sdebug _%s_ tap saw route use %d %s", net_id.dump(), 
 	      cmh->uid(), p.route.dump());
