@@ -962,7 +962,7 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
 			}
 		}
 		
-  		/*SRPacket p;
+  		SRPacket p;
   		p.dest = id;
   		p.src = net_id;
   		p.pkt = allocpkt();
@@ -982,10 +982,10 @@ void DSRAgent::addToNeighbourLoc(ID id, double x, double y, int status, Time t) 
   
   		srh->init();
 		srh -> link_timeout() = 1;
-		srh -> link_timeout_time() = timeOut;*/
-		//printf("\nGone 2 me: %d at: %lf\n", node_ -> nodeid(), Scheduler::instance().clock());
-		//Scheduler::instance().schedule(ll, p.pkt, 0.0);
-		//p.pkt = NULL;
+		srh -> link_timeout_time() = timeOut;
+		printf("\nInside Gone 2 me: %d at: %lf\n", node_ -> nodeid(), Scheduler::instance().clock());
+		Scheduler::instance().schedule(ll, p.pkt, 0.0);
+		p.pkt = NULL;
 		updateNeighbourTimeOut(id, timeOut);
 		updateTimeout();
 		printf("Timeout between nodes %d and %d is %lf sent at time %lf\n", node_ -> nodeid(), id.addr, timeOut, Scheduler::instance().clock());
