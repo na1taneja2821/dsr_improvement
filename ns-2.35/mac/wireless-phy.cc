@@ -55,6 +55,7 @@
 #include <sys/param.h>  /* for MIN/MAX */
 
 #include "diffusion/diff_header.h"
+#include <dsr/hdr_sr.h>
 
 void Sleep_Timer::expire(Event *) {
 	a_->UpdateSleepEnergy();
@@ -362,7 +363,8 @@ WirelessPhy::sendUp(Packet *p)
 			       Pr,RXThresh);
 #endif
 		}
-		if (Pr < MAC_MIN_POWER) {
+		hdr_sr *srh = hdr_sr::access(p);
+		if ((srh -> route_request() || srh -> route_reply()) && Pr < MAC_MIN_POWER) {
 			pkt_recvd = 0;
 			goto DONE;
 		}
