@@ -110,7 +110,7 @@ struct direction_eval {
 	int 	dir_valid_;
 	double 	rad_velocity;
 	double 	rad_acceleration;
-}	
+};
 
 /* ======================================================================
    DSR Flow State Draft Stuff
