@@ -362,6 +362,10 @@ WirelessPhy::sendUp(Packet *p)
 			       Pr,RXThresh);
 #endif
 		}
+		if (Pr < MAC_MIN_POWER) {
+			pkt_recvd = 0;
+			goto DONE;
+		}
 	}
 	if(modulation_) {
 		hdr_cmn *hdr = HDR_CMN(p);

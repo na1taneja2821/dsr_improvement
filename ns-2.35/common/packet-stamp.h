@@ -54,7 +54,10 @@ public:
      objects in the future. */
   double RxPr;			// power with which pkt is received
   double CPThresh;		// capture threshold for recving interface
-
+	
+	/* This variable is used to tell whether to send packet to a particular node
+	   or not */
+	int packetStatus; 
 protected:
   Antenna       *ant;
   MobileNode	*node;
