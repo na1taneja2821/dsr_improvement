@@ -91,6 +91,8 @@ public:
   	// d -- distance between transmitter and receiver
   	// return -- received signal power
 
+	// hack to get the distance as well
+	double dist;
 protected:
   char *name;
   Topography *topo;

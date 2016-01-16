@@ -323,7 +323,12 @@ CMUTrace::format_mac_common(Packet *p, const char *why, int offset)
 		ch->size());
 	
 	offset = strlen(pt_->buffer());
-
+	if(op == 's' && strcmp(tracename, "MAC") == 0) {
+		sprintf(pt_->buffer() + offset, " %e ", p->txinfo_.getTxPr());
+	} else if(op == 'r' && strcmp(tracename, "MAC") == 0) {
+		sprintf(pt_->buffer() + offset, " %e %lf ", p->txinfo_. RxPr, p->txinfo_.dist);
+	}
+	offset = strlen(pt_->buffer());
 	if(tracetype == TR_PHY) {
 		format_phy(p, offset);
 		offset = strlen(pt_->buffer());

@@ -343,7 +343,7 @@ WirelessPhy::sendUp(Packet *p)
 
 	if(propagation_) {
 		s.stamp((MobileNode*)node(), ant_, 0, lambda_);
-		Pr = propagation_->Pr(&p->txinfo_, &s, this);
+		Pr = propagation_->Pr(&p->txinfo_, &s, this); 
 		if (Pr < CSThresh_) {
 			pkt_recvd = 0;
 			goto DONE;
@@ -385,7 +385,7 @@ DONE:
 	   objects in the future. */
 	p->txinfo_.RxPr = Pr;
 	p->txinfo_.CPThresh = CPThresh_;
-
+	printf("hey %lf %lf\n", p->txinfo_.RxPr, Scheduler::instance().clock());
 	/*
 	 * Decrease energy if packet successfully received
 	 */

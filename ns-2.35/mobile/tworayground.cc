@@ -102,7 +102,7 @@ TwoRayGround::Pr(PacketStamp *t, PacketStamp *r, WirelessPhy *ifp)
   d = sqrt((rX - tX) * (rX - tX) 
 	   + (rY - tY) * (rY - tY) 
 	   + (rZ - tZ) * (rZ - tZ));
-    
+   t->dist = d; 
   /* We're going to assume the ground is essentially flat.
      This empirical two ground ray reflection model doesn't make 
      any sense if the ground is not a plane. */
@@ -156,6 +156,7 @@ TwoRayGround::Pr(PacketStamp *t, PacketStamp *r, WirelessPhy *ifp)
 
   if(d <= crossover_dist) {
     Pr = Friis(t->getTxPr(), Gt, Gr, lambda, L, d);
+	printf("Friis %e %lf\n", Pr, d);
 #if DEBUG > 3
     printf("Friis %e\n",Pr);
 #endif
@@ -163,6 +164,7 @@ TwoRayGround::Pr(PacketStamp *t, PacketStamp *r, WirelessPhy *ifp)
   }
   else {
     Pr = TwoRay(t->getTxPr(), Gt, Gr, ht, hr, L, d);
+	printf("TwoRay %e %lf\n", Pr, d);
 #if DEBUG > 3
     printf("TwoRay %e\n",Pr);
 #endif    
