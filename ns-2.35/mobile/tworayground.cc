@@ -156,7 +156,7 @@ TwoRayGround::Pr(PacketStamp *t, PacketStamp *r, WirelessPhy *ifp)
 
   if(d <= crossover_dist) {
     Pr = Friis(t->getTxPr(), Gt, Gr, lambda, L, d);
-	printf("Friis %e %lf\n", Pr, d);
+	//printf("Friis %e %lf\n", Pr, d);
 #if DEBUG > 3
     printf("Friis %e\n",Pr);
 #endif
@@ -164,7 +164,7 @@ TwoRayGround::Pr(PacketStamp *t, PacketStamp *r, WirelessPhy *ifp)
   }
   else {
     Pr = TwoRay(t->getTxPr(), Gt, Gr, ht, hr, L, d);
-	printf("TwoRay %e %lf\n", Pr, d);
+	//printf("TwoRay %e %lf\n", Pr, d);
 #if DEBUG > 3
     printf("TwoRay %e\n",Pr);
 #endif    

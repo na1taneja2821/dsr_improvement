@@ -385,7 +385,7 @@ DONE:
 	   objects in the future. */
 	p->txinfo_.RxPr = Pr;
 	p->txinfo_.CPThresh = CPThresh_;
-	printf("hey %lf %lf\n", p->txinfo_.RxPr, Scheduler::instance().clock());
+	//printf("hey %lf %lf\n", p->txinfo_.RxPr, Scheduler::instance().clock());
 	/*
 	 * Decrease energy if packet successfully received
 	 */
