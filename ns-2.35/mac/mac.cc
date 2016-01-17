@@ -130,6 +130,7 @@ int Mac::command(int argc, const char*const* argv)
 
 void Mac::recv(Packet* p, Handler* h)
 {
+	printf("Recv");
 	if (hdr_cmn::access(p)->direction() == hdr_cmn::UP) {
 		sendUp(p);
 		return;
@@ -144,6 +145,7 @@ void Mac::recv(Packet* p, Handler* h)
 
 void Mac::sendUp(Packet* p) 
 {
+	printf("SendUp");
 	char* mh = (char*)p->access(hdr_mac::offset_);
 	int dst = this->hdr_dst(mh);
 
@@ -155,6 +157,10 @@ void Mac::sendUp(Packet* p)
 			//Dont want to creat a trace
 			Packet::free(p);
 		}
+		return;
+	}
+	if(p -> txinfo_.packetStatus == 1) {
+		Packet::free(p);
 		return;
 	}
 	Scheduler::instance().schedule(uptarget_, p, delay_);

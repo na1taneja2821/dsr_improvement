@@ -365,8 +365,8 @@ WirelessPhy::sendUp(Packet *p)
 		}
 		hdr_sr *srh = hdr_sr::access(p);
 		if ((srh -> route_request() || srh -> route_reply()) && Pr < MAC_MIN_POWER) {
-			pkt_recvd = 0;
-			goto DONE;
+			printf("Pr %e %d %d %lf\n", Pr, p ->txinfo_.getNode() -> nodeid(), node_ -> nodeid(), Scheduler::instance().clock());
+			p -> txinfo_.packetStatus = 1;
 		}
 	}
 	if(modulation_) {

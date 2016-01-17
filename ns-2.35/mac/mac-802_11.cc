@@ -58,7 +58,7 @@
 #include "agent.h"
 #include "basetrace.h"
 
-
+#include <dsr/hdr_sr.h>
 /* our backoff timer doesn't count down in idle times during a
  * frame-exchange sequence as the mac tx state isn't idle; genreally
  * these idle times are less than DIFS and won't contribute to
@@ -2033,8 +2033,12 @@ Mac802_11::recvDATA(Packet *p)
  		ch->addr_type() = NS_AF_ILINK;
  		ch->direction() = hdr_cmn::DOWN;
  	}
-
-	uptarget_->recv(p, (Handler*) 0);
+	hdr_sr *srh = hdr_sr::access(p);
+	if(!(srh -> route_request() || srh -> route_reply())) {
+		uptarget_->recv(p, (Handler*) 0);
+	} else if((srh -> route_request() || srh -> route_reply()) && p -> txinfo_.RxPr > MAC_MIN_POWER) {
+		uptarget_->recv(p, (Handler*) 0);
+	}
 	
 }
 
