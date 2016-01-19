@@ -1270,6 +1270,14 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
   assert(srh->valid());
   assert(cmnh->size() > 0);
 
+  if(srh -> route_request() || srh -> route_reply()) {
+    if(srh -> route_request()) {
+      printf("Route Request ");
+    } else {
+      printf("Route Reply");
+    }
+    printf("%u %u\n", p.src.addr, p.dest.addr);
+  }
   ID dest;
   if (diff_subnet(p.dest,net_id)) {
   dest = ID(node_->base_stn(),::IP);
@@ -2620,6 +2628,8 @@ DSRAgent::xmitFailed(Packet *pkt, const char* reason)
      p.pkt freed or handed off */
 {
   hdr_sr *srh = hdr_sr::access(pkt);
+  SRPacket p1(pkt, srh);
+  printf("Route Error %u %u\n", p1.route[0].addr, p1.route[p1.route.length() - 1].addr);
   hdr_ip *iph = hdr_ip::access(pkt);
   hdr_cmn *cmh = hdr_cmn::access(pkt);
 
