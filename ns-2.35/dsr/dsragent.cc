@@ -1266,7 +1266,14 @@ DSRAgent::sendOutPacketWithRoute(SRPacket& p, bool fresh, Time delay)
 {
   hdr_sr *srh =  hdr_sr::access(p.pkt);
   hdr_cmn *cmnh = hdr_cmn::access(p.pkt);
-
+  if(srh -> route_request() || srh -> route_reply()) {
+    if(srh -> route_request()) {
+      printf("Route Request ");
+    } else {
+      printf("Route Reply ");
+    }
+    printf("%u %u %lf\n", p.src.addr, p.dest.addr, Scheduler::instance().clock());
+  }
   assert(srh->valid());
   assert(cmnh->size() > 0);
 
@@ -2622,7 +2629,8 @@ DSRAgent::xmitFailed(Packet *pkt, const char* reason)
   hdr_sr *srh = hdr_sr::access(pkt);
   hdr_ip *iph = hdr_ip::access(pkt);
   hdr_cmn *cmh = hdr_cmn::access(pkt);
-
+  SRPacket p1(pkt, srh);
+  printf("Route Error %u %u %lf\n", p1.route[0].addr, p1.route[p1.route.length() - 1].addr, Scheduler::instance().clock());
   assert(cmh->size() >= 0);
 
   srh->cur_addr() -= 1;		// correct for inc already done on sending
