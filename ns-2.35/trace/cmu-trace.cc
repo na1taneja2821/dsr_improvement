@@ -326,8 +326,11 @@ CMUTrace::format_mac_common(Packet *p, const char *why, int offset)
 	if(op == 's' && strcmp(tracename, "MAC") == 0) {
 		sprintf(pt_->buffer() + offset, " %e ", p->txinfo_.getTxPr());
 	} else if(op == 'r' && strcmp(tracename, "MAC") == 0) {
-		double theta = acos(p->txinfo_.dist / 250);
-		double ratio = 250 * 250 * (theta - sin(2 * theta) / 2) / (p -> txinfo_.dist);
+		double ratio = 0.0;
+		if(p -> txinfo_.dist <= 250) {
+			double theta = acos(p->txinfo_.dist / 250);
+			ratio = 250 * 250 * (theta - sin(2 * theta) / 2) / (p -> txinfo_.dist);
+		}
 		sprintf(pt_->buffer() + offset, " %e %lf %e ", p->txinfo_. RxPr, p->txinfo_.dist, ratio);
 	}
 	offset = strlen(pt_->buffer());
