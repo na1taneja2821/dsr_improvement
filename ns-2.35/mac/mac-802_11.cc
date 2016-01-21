@@ -2038,7 +2038,7 @@ Mac802_11::recvDATA(Packet *p)
 	double transRange = 250;
 	if(dist <= transRange) {
 		double theta = acos(dist / transRange);
-		double ratio = (theta - sin(2 * theta) / 2) / acos(-1);
+		double ratio = transRange * transRange * (theta - sin(2 * theta) / 2) / dist;
 		if(!(srh -> route_request() || srh -> route_reply())) {
 			uptarget_->recv(p, (Handler*) 0);
 		} else if((srh -> route_request() || srh -> route_reply()) && ratio > MAC_MIN_RATIO) {

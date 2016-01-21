@@ -79,7 +79,7 @@ class Channel;
 
 #define MAC_MIN_POWER 7.5E-10
 #define MAC_MID_POWER 1E-9
-#define MAC_MIN_RATIO 3.75E-2
+#define MAC_MIN_RATIO 35
 
 enum MacState {
 	MAC_IDLE	= 0x0000,
