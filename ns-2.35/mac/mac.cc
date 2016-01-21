@@ -159,10 +159,6 @@ void Mac::sendUp(Packet* p)
 		}
 		return;
 	}
-	if(p -> txinfo_.packetStatus == 1) {
-		Packet::free(p);
-		return;
-	}
 	Scheduler::instance().schedule(uptarget_, p, delay_);
 }
 

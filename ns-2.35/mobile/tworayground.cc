@@ -102,7 +102,7 @@ TwoRayGround::Pr(PacketStamp *t, PacketStamp *r, WirelessPhy *ifp)
   d = sqrt((rX - tX) * (rX - tX) 
 	   + (rY - tY) * (rY - tY) 
 	   + (rZ - tZ) * (rZ - tZ));
-    
+  t -> distance = d; 
   /* We're going to assume the ground is essentially flat.
      This empirical two ground ray reflection model doesn't make 
      any sense if the ground is not a plane. */

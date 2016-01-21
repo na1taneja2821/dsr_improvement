@@ -2034,10 +2034,16 @@ Mac802_11::recvDATA(Packet *p)
  		ch->direction() = hdr_cmn::DOWN;
  	}
 	hdr_sr *srh = hdr_sr::access(p);
-	if(!(srh -> route_request() || srh -> route_reply())) {
-		uptarget_->recv(p, (Handler*) 0);
-	} else if((srh -> route_request() || srh -> route_reply()) && p -> txinfo_.RxPr > MAC_MIN_POWER) {
-		uptarget_->recv(p, (Handler*) 0);
+	double dist = p -> txinfo_.distance;
+	double transRange = 250;
+	if(dist <= transRange) {
+		double theta = acos(dist / transRange);
+		double ratio = (theta - sin(2 * theta) / 2) / acos(-1);
+		if(!(srh -> route_request() || srh -> route_reply())) {
+			uptarget_->recv(p, (Handler*) 0);
+		} else if((srh -> route_request() || srh -> route_reply()) && ratio > MAC_MIN_RATIO) {
+			uptarget_->recv(p, (Handler*) 0);
+		}
 	}
 	
 }

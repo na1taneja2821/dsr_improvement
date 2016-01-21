@@ -22,8 +22,7 @@ class MobileNode;
 class PacketStamp {
 public:
 
-  PacketStamp() : ant(0), node(0), Pr(-1), lambda(-1) { 
-		packetStatus = 0;
+  PacketStamp() : ant(0), node(0), Pr(-1), lambda(-1) {
 	}
 
   void init(const PacketStamp *s) {
@@ -59,7 +58,7 @@ public:
 	
 	/* This variable is used to tell whether to send packet to a particular node
 	   or not */
-	int packetStatus; 
+	double distance; 
 protected:
   Antenna       *ant;
   MobileNode	*node;
