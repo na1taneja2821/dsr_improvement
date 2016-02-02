@@ -77,9 +77,9 @@ class Channel;
 #define ETHERTYPE_IP	0x0800
 #define ETHERTYPE_ARP	0x0806
 
-#define MAC_MIN_POWER 7.5E-10
+#define MAC_MIN_POWER 1.7E-9
 #define MAC_MID_POWER 1E-9
-#define MAC_MIN_RATIO 35
+#define MAC_MIN_RATIO 120
 
 enum MacState {
 	MAC_IDLE	= 0x0000,
