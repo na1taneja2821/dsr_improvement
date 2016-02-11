@@ -59,6 +59,7 @@
 #include "basetrace.h"
 
 #include <dsr/hdr_sr.h>
+#include <aodv/aodv_packet.h>
 /* our backoff timer doesn't count down in idle times during a
  * frame-exchange sequence as the mac tx state isn't idle; genreally
  * these idle times are less than DIFS and won't contribute to
@@ -2033,17 +2034,36 @@ Mac802_11::recvDATA(Packet *p)
  		ch->addr_type() = NS_AF_ILINK;
  		ch->direction() = hdr_cmn::DOWN;
  	}
-	hdr_sr *srh = hdr_sr::access(p);
-	double dist = p -> txinfo_.distance;
-	double transRange = 250;
-	if(dist <= transRange) {
-		double theta = acos(dist / transRange);
-		double ratio = (theta - sin(2 * theta) / 2) / acos(-1);
-		if(!(srh -> route_request() || srh -> route_reply())) {
-			uptarget_->recv(p, (Handler*) 0);
-		} else if((srh -> route_request() || srh -> route_reply()) && ratio > MAC_MIN_RATIO) {
-			uptarget_->recv(p, (Handler*) 0);
+	if(ch -> ptype() == PT_DSR) {
+
+		hdr_sr *srh = hdr_sr::access(p);
+		double dist = p -> txinfo_.distance;
+		double transRange = 250;
+		if(dist <= transRange) {
+			double theta = acos(dist / transRange);
+			double ratio = (theta - sin(2 * theta) / 2) / acos(-1);
+			if(!(srh -> route_request() || srh -> route_reply())) {
+				uptarget_->recv(p, (Handler*) 0);
+			} else if((srh -> route_request() || srh -> route_reply()) && ratio > MAC_MIN_RATIO) {
+				uptarget_->recv(p, (Handler*) 0);
+			}
 		}
+	} else if(ch -> ptype() == PT_AODV) {
+	
+		hdr_aodv *ah = hdr_aodv::access(p);
+		double dist = p -> txinfo_.distance;
+		double transRange = 250;
+		if(dist <= transRange) {
+			double theta = acos(dist / transRange);
+			double ratio = (theta - sin(2 * theta) / 2) / acos(-1);
+			if(!(ah -> ah_type == AODVTYPE_RREQ || ah -> ah_type == AODVTYPE_RREP)) {
+				uptarget_->recv(p, (Handler*) 0);
+			} else if((ah -> ah_type == AODVTYPE_RREQ || ah -> ah_type == AODVTYPE_RREP) && ratio > MAC_MIN_RATIO) {
+				uptarget_->recv(p, (Handler*) 0);
+			}
+		}
+	} else {
+		uptarget_ -> recv(p, (Handler*) 0);
 	}
 	
 }
