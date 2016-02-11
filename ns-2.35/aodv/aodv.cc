@@ -293,6 +293,7 @@ aodv_rt_failed_callback(Packet *p, void *arg) {
  */
 void
 AODV::rt_ll_failed(Packet *p) {
+printf("Route Error occurred\n");
 struct hdr_cmn *ch = HDR_CMN(p);
 struct hdr_ip *ih = HDR_IP(p);
 aodv_rt_entry *rt;
