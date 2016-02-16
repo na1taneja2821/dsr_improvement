@@ -122,8 +122,7 @@ public:
 
   void Terminate(void);
 	// called at the end of the simulation to purge all packets
-  void sendOutBCastPkt(Packet *p);
-  
+  void sendOutBCastPkt(Packet *p); 
   DSRAgent();
   ~DSRAgent();
 

@@ -104,6 +104,8 @@ static int dsr_salvage_max_requests = 1;
  */
 static bool dsr_salvage_allow_propagating = 0;
 
+static int routeLength = 0;
+static int numberOfRoutes = 0;
 #endif
 
 /* couple of flowstate constants... */
@@ -654,6 +656,9 @@ DSRAgent::recv(Packet* packet, Handler*)
     {
       if (p.dest == net_id || p.dest == IP_broadcast)
 	{ // this packet is intended for us
+	  routeLength += p.route.length();
+	  numberOfRoutes++;
+	  printf("Average route length %lf\n", (double) routeLength /  numberOfRoutes);
 	  handlePacketReceipt(p);
 	  goto done;
 	}
