@@ -656,8 +656,10 @@ DSRAgent::recv(Packet* packet, Handler*)
     {
       if (p.dest == net_id || p.dest == IP_broadcast)
 	{ // this packet is intended for us
-	  routeLength += p.route.length();
-	  numberOfRoutes++;
+	  if(p.route.length() != 0) {
+	  	routeLength += p.route.length();
+	  	numberOfRoutes++;
+	  }
 	  printf("Average route length %lf\n", (double) routeLength /  numberOfRoutes);
 	  handlePacketReceipt(p);
 	  goto done;
