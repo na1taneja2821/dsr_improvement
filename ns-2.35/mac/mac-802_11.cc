@@ -2044,7 +2044,7 @@ Mac802_11::recvDATA(Packet *p)
 			double ratio = (theta - sin(2 * theta) / 2) / acos(-1);
 			if(!(srh -> route_request() || srh -> route_reply())) {
 				uptarget_->recv(p, (Handler*) 0);
-			} else if((srh -> route_request() || srh -> route_reply()) && ratio > MAC_MIN_RATIO) {
+			} else if((srh -> route_request() || srh -> route_reply()) && dist < 210) {
 				uptarget_->recv(p, (Handler*) 0);
 			}
 		}
@@ -2058,7 +2058,7 @@ Mac802_11::recvDATA(Packet *p)
 			double ratio = (theta - sin(2 * theta) / 2) / acos(-1);
 			if(!(ah -> ah_type == AODVTYPE_RREQ || ah -> ah_type == AODVTYPE_RREP)) {
 				uptarget_->recv(p, (Handler*) 0);
-			} else if((ah -> ah_type == AODVTYPE_RREQ || ah -> ah_type == AODVTYPE_RREP) && ratio > MAC_MIN_RATIO) {
+			} else if((ah -> ah_type == AODVTYPE_RREQ || ah -> ah_type == AODVTYPE_RREP) && dist < 210) {
 				uptarget_->recv(p, (Handler*) 0);
 			}
 		}
